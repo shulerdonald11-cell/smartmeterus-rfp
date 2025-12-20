@@ -1,28 +1,28 @@
 import streamlit as st
 from xai_sdk import Client
 from xai_sdk.chat import user, assistant
-from xai_sdk.tools import collections_search
 import os
 from dotenv import load_dotenv
 from fpdf import FPDF
 import base64
-import json
 
 load_dotenv()
 
 client = Client(api_key=os.getenv("GROK_API_KEY"))
-collection_id = os.getenv("GROK_COLLECTION_ID")
 
 # Page config & styling
 st.set_page_config(page_title="AMI Validate Solutions", page_icon="💧", layout="centered")
 
+# Custom CSS — raises the chat input higher
 st.markdown("""
 <style>
-    .main {background-color: #f0f7fa;}
+    .main {background-color: #f0f7fa; padding-bottom: 100px;}
     .header {font-size: 42px; color: #006699; text-align: center; padding: 20px;}
     .subheader {font-size: 24px; color: #0088cc; text-align: center;}
     .info-box {background-color: #e6f5ff; padding: 20px; border-radius: 10px; border-left: 6px solid #006699;}
     .bullet {margin-left: 20px;}
+    /* Raise the chat input */
+    .stChatInput {position: fixed; bottom: 20px; width: 80%; left: 10%; z-index: 1000;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -100,25 +100,17 @@ else:
     st.markdown("### 💬 Chat with Your AMI Expert")
     st.info("Paste answers from the questionnaire or just describe your project — I'll ask clarifying questions as needed.")
 
-    # Initialize chat with RAG tool
+    # Initialize chat (no RAG tool for stability — Grok's knowledge is excellent for RFPs)
     if "chat" not in st.session_state:
-        tools = []
-        if collection_id:
-            tools = [collections_search(collection_ids=[collection_id])]
-        chat = client.chat.create(
-            model="grok-4-latest",
-            tools=tools
-        )
+        chat = client.chat.create(model="grok-4-latest")
         chat.append(assistant("""
 You are an expert water AMI consultant with 20+ years experience helping small to mid-sized utilities create professional RFPs.
-
-Use the collections_search tool to retrieve real RFP language from the uploaded samples.
 
 Guide the user step-by-step:
 - Start with basics: meter count, sizes, utility name/location, current system.
 - Ask about project goals: turnkey, install-only, product-only, AMI features.
 - Probe details: retrofits, large meters, pit conditions, risks, WOMS.
-- When ready, generate a complete RFP pulling and synthesizing from collection samples.
+- Only generate the full RFP when the user has provided sufficient detail or says "generate the RFP".
 
 Use these sections:
 - Project Overview / Background
@@ -136,8 +128,8 @@ At the end, offer: "Need on-site field validation or custom consulting? We offer
 
     chat = st.session_state.chat
 
-    # Display chat history
-    for msg in chat.messages[1:]:  # skip system
+    # Display chat history (skip system)
+    for msg in chat.messages[1:]:
         role = "human" if msg.role == "user" else "ai"
         with st.chat_message(role):
             st.markdown(msg.content)
