@@ -1,6 +1,6 @@
 import streamlit as st
 from xai_sdk import Client
-from xai_sdk.chat import user, assistant
+from xai_sdk.chat import user
 from xai_sdk.tools import collections_search
 import os
 from dotenv import load_dotenv
@@ -100,20 +100,15 @@ else:
     st.markdown("### 💬 Chat with Your AMI Expert")
     st.info("Paste answers from the questionnaire or just describe your project — I'll ask clarifying questions as needed.")
 
-    # Initialize chat with RAG tool
+    # Initialize chat with RAG tool and system prompt
     if "chat" not in st.session_state:
         tools = []
         if collection_id:
             tools = [collections_search(collection_ids=[collection_id])]
         st.session_state.chat = client.chat.create(
             model="grok-4-latest",
-            tools=tools
-        )
-
-    chat = st.session_state.chat
-
-    # System prompt
-    chat.append(assistant("""
+            tools=tools,
+            messages=[assistant("""
 You are an expert water AMI consultant with 20+ years experience helping small to mid-sized utilities create professional RFPs.
 
 Use the collections_search tool to retrieve real RFP language from the uploaded samples.
@@ -135,7 +130,10 @@ Use these sections:
 Remain brand-neutral unless specified. Include timelines and evaluation focus on experience if provided.
 
 At the end, offer: "Need on-site field validation or custom consulting? We offer tiers starting at $10k or $250/hr."
-"""))
+""")]
+        )
+
+    chat = st.session_state.chat
 
     # Display chat history
     for msg in chat.messages[1:]:  # skip system
