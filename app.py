@@ -4,9 +4,6 @@ import os
 from dotenv import load_dotenv
 from fpdf import FPDF
 import base64
-import speech_recognition as sr
-from pydub import AudioSegment
-from pydub.silence import split_on_silence
 
 load_dotenv()
 
@@ -104,8 +101,9 @@ else:
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
-
-    st.session_state.messages.append({"role": "system", "content": """
+        st.session_state.messages.append({
+            "role": "system",
+            "content": """
 You are an expert water AMI consultant with 20+ years experience helping small to mid-sized utilities create professional RFPs.
 
 Always guide step-by-step to flush out details:
@@ -114,43 +112,19 @@ Always guide step-by-step to flush out details:
 - Ask about billing CIS update process and field data collection management for meter exchanges.
 - Probe for more details if prompt is basic.
 
-Only generate the full RFP when you have sufficient info or user says "generate".
+Only generate the full RFP when the user has provided sufficient detail or says "generate the RFP".
 
-Use real-world U.S. water utility RFP language.
-"""})
+Use real-world U.S. water utility RFP language and structure.
+"""
+        })
 
-    # Display history
-    for msg in st.session_state.messages[1:]:  # skip system
-        with st.chat_message(msg["role"]):
+    # Display chat history
+    for msg in st.session_state.messages[1:]:
+        with st.chat_message("user" if msg["role"] == "user" else "assistant"):
             st.markdown(msg["content"])
 
-    # Voice input button
-    if st.button("🎤 Speak Your Prompt"):
-        audio = st.experimental_audio_input("Speak now...")
-        if audio:
-            audio_bytes = audio.getvalue()
-            with open("audio.wav", "wb") as f:
-                f.write(audio_bytes)
-            sound = AudioSegment.from_wav("audio.wav")
-            chunks = split_on_silence(sound, min_silence_len=500, silence_thresh=sound.dBFS-14)
-            whole_text = ""
-            for chunk in chunks:
-                chunk.export("chunk.wav", format="wav")
-                with sr.AudioFile("chunk.wav") as source:
-                    audio_listened = r.record(source)
-                    try:
-                        text = r.recognize_google(audio_listened)
-                        whole_text += text + " "
-                    except sr.UnknownValueError:
-                        pass
-            if whole_text:
-                st.session_state.prompt = whole_text
-            else:
-                st.error("Sorry, couldn't understand the audio.")
-
-    # User input (text or from voice)
-    prompt = st.session_state.get("prompt", "")
-    if prompt or (prompt := st.chat_input("Tell me about your utility and AMI project...")):
+    # User input
+    if prompt := st.chat_input("Tell me about your utility and AMI project..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -171,7 +145,6 @@ Use real-world U.S. water utility RFP language.
 
         st.session_state.messages.append({"role": "assistant", "content": response})
         st.session_state.last_response = response
-        st.session_state.prompt = ""  # Clear voice prompt
 
     # PDF Download
     if "last_response" in st.session_state and "Request for Proposals" in st.session_state.last_response:
