@@ -100,17 +100,19 @@ else:
     st.markdown("### 💬 Chat with Your AMI Expert")
     st.info("Paste answers from the questionnaire or just describe your project — I'll ask clarifying questions as needed.")
 
-    # Initialize chat with RAG tool and system prompt
+    # Initialize chat with RAG tool
     if "chat" not in st.session_state:
         tools = []
         if collection_id:
             tools = [collections_search(collection_ids=[collection_id])]
         chat = client.chat.create(
             model="grok-4-latest",
-            tools=tools,
-            messages=[{
-                "role": "system",
-                "content": """
+            tools=tools
+        )
+        # Add system prompt after creation
+        chat.append({
+            "role": "system",
+            "content": """
 You are an expert water AMI consultant with 20+ years experience helping small to mid-sized utilities create professional RFPs.
 
 Use the collections_search tool to retrieve real RFP language from the uploaded samples.
@@ -133,8 +135,7 @@ Remain brand-neutral unless specified. Include timelines and evaluation focus on
 
 At the end, offer: "Need on-site field validation or custom consulting? We offer tiers starting at $10k or $250/hr."
 """
-            }]
-        )
+        })
         st.session_state.chat = chat
 
     chat = st.session_state.chat
