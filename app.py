@@ -153,12 +153,16 @@ At the end, offer: "Need on-site field validation or custom consulting? We offer
             response = ""
             placeholder = st.empty()
             for chunk in chat.stream():
-                if chunk.content:
-                    response += chunk.content
+                content = ""
+                if hasattr(chunk, 'delta') and chunk.delta and hasattr(chunk.delta, 'content'):
+                    content = chunk.delta.content or ""
+                elif hasattr(chunk, 'content'):
+                    content = chunk.content or ""
+                if content:
+                    response += content
                     placeholder.markdown(response + "▌")
             placeholder.markdown(response)
 
-        # Store for PDF
         st.session_state.last_response = response
 
     # PDF Download
