@@ -119,4 +119,67 @@ Guide the user step-by-step:
 - Start with basics: meter count, sizes, utility name/location, current system.
 - Ask about project goals: turnkey, install-only, product-only, AMI features.
 - Probe details: retrofits, large meters, pit conditions, risks, WOMS.
-- When ready, generate a complete RFP pulling and synthesizing from collection samples
+- When ready, generate a complete RFP pulling and synthesizing from collection samples.
+
+Use these sections:
+- Project Overview / Background
+- Scope of Work (include WOMS if turnkey)
+- Technical Specifications
+- Implementation Plan & Training
+- Pricing Schedule & Evaluation Criteria
+- Attachments / Appendices
+
+Remain brand-neutral unless specified. Include timelines and evaluation focus on experience if provided.
+
+At the end, offer: "Need on-site field validation or custom consulting? We offer tiers starting at $10k or $250/hr."
+"""
+            }]
+        )
+        st.session_state.chat = chat
+
+    chat = st.session_state.chat
+
+    # Display chat history (skip system prompt)
+    for msg in chat.messages[1:]:
+        role = "human" if msg.role == "user" else "ai"
+        with st.chat_message(role):
+            st.markdown(msg.content)
+
+    # User input
+    if prompt := st.chat_input("Tell me about your utility and AMI project..."):
+        chat.append(user(prompt))
+        with st.chat_message("human"):
+            st.markdown(prompt)
+
+        with st.chat_message("ai"):
+            response = ""
+            placeholder = st.empty()
+            for chunk in chat.stream():
+                content = ""
+                if hasattr(chunk, 'content'):
+                    content = chunk.content or ""
+                elif hasattr(chunk, 'delta') and chunk.delta and hasattr(chunk.delta, 'content'):
+                    content = chunk.delta.content or ""
+                if content:
+                    response += content
+                    placeholder.markdown(response + "▌")
+            placeholder.markdown(response)
+
+        st.session_state.last_response = response
+
+    # PDF Download
+    if "last_response" in st.session_state and "Request for Proposals" in st.session_state.last_response:
+        if st.button("📄 Download RFP as PDF"):
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", size=12)
+            pdf.multi_cell(0, 10, st.session_state.last_response)
+            pdf_output = "Custom_AMI_RFP.pdf"
+            pdf.output(pdf_output)
+            with open(pdf_output, "rb") as f:
+                b64 = base64.b64encode(f.read()).decode()
+                href = f'<a href="data:application/pdf;base64,{b64}" download="{pdf_output}">Click to download your RFP</a>'
+                st.markdown(href, unsafe_allow_html=True)
+
+st.markdown("---")
+st.caption("AMI Validate Solutions • Professional RFP + Optional Field Validation Services")
