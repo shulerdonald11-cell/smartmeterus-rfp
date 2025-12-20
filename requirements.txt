@@ -1,4 +1,4 @@
 streamlit
-openai
+xai-sdk
 python-dotenv
 fpdf
