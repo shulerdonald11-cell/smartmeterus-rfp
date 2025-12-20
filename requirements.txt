@@ -2,3 +2,5 @@ streamlit
 xai-sdk
 python-dotenv
 fpdf
+speechrecognition
+pydub
