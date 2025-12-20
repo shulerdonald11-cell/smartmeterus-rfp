@@ -1,6 +1,6 @@
 import streamlit as st
 from xai_sdk import Client
-from xai_sdk.chat import user
+from xai_sdk.chat import user, assistant
 from xai_sdk.tools import collections_search
 import os
 from dotenv import load_dotenv
@@ -9,9 +9,11 @@ import base64
 
 load_dotenv()
 
+# xAI client
 client = Client(api_key=os.getenv("GROK_API_KEY"))
 collection_id = os.getenv("GROK_COLLECTION_ID")
 
+# Page config & styling
 st.set_page_config(page_title="AMI Validate Solutions", page_icon="💧", layout="centered")
 
 st.markdown("""
@@ -28,6 +30,7 @@ st.markdown("<div class='header'>💧 AMI Validate Solutions</div>", unsafe_allo
 st.markdown("<div class='subheader'>Professional Water AMI RFP Generator</div>", unsafe_allow_html=True)
 st.markdown("**20+ Years of Utility Expertise • Free Customized RFP in Minutes**")
 
+# Landing page state
 if "started" not in st.session_state:
     st.session_state.started = False
 
@@ -97,12 +100,17 @@ else:
     st.markdown("### 💬 Chat with Your AMI Expert")
     st.info("Paste answers from the questionnaire or just describe your project — I'll ask clarifying questions as needed.")
 
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-        # System prompt as first message
-        st.session_state.messages.append({
-            "role": "system",
-            "content": """
+    # Initialize chat with RAG tool
+    if "chat" not in st.session_state:
+        tools = []
+        if collection_id:
+            tools = [collections_search(collection_ids=[collection_id])]
+        chat = client.chat.create(
+            model="grok-4-latest",
+            tools=tools
+        )
+        # Add system prompt as assistant message
+        chat.append(assistant("""
 You are an expert water AMI consultant with 20+ years experience helping small to mid-sized utilities create professional RFPs.
 
 Use the collections_search tool to retrieve real RFP language from the uploaded samples.
@@ -124,48 +132,40 @@ Use these sections:
 Remain brand-neutral unless specified. Include timelines and evaluation focus on experience if provided.
 
 At the end, offer: "Need on-site field validation or custom consulting? We offer tiers starting at $10k or $250/hr."
-"""
-        })
+"""))
+        st.session_state.chat = chat
 
-    messages = st.session_state.messages
+    chat = st.session_state.chat
 
-    # Display history
-    for msg in messages[1:]:  # skip system
-        role = "human" if msg["role"] == "user" else "ai"
+    # Display chat history (skip system prompt)
+    for msg in chat.messages[1:]:
+        role = "human" if msg.role == "user" else "ai"
         with st.chat_message(role):
-            st.markdown(msg["content"])
+            st.markdown(msg.content)
 
+    # User input
     if prompt := st.chat_input("Tell me about your utility and AMI project..."):
-        messages.append({"role": "user", "content": prompt})
+        chat.append(user(prompt))
         with st.chat_message("human"):
             st.markdown(prompt)
 
         with st.chat_message("ai"):
             response = ""
             placeholder = st.empty()
-            tools = []
-            if collection_id:
-                tools = [collections_search(collection_ids=[collection_id])]
-            stream = client.chat.completions.create(
-                model="grok-4-latest",
-                messages=messages,
-                tools=tools,
-                stream=True
-            )
-            for chunk in stream:
+            for chunk in chat.stream():
                 content = ""
-                if hasattr(chunk, 'choices') and chunk.choices and hasattr(chunk.choices[0], 'delta') and chunk.choices[0].delta.content:
-                    content = chunk.choices[0].delta.content or ""
-                elif hasattr(chunk, 'content'):
+                if hasattr(chunk, 'content'):
                     content = chunk.content or ""
+                elif hasattr(chunk, 'delta') and chunk.delta and hasattr(chunk.delta, 'content'):
+                    content = chunk.delta.content or ""
                 if content:
                     response += content
                     placeholder.markdown(response + "▌")
             placeholder.markdown(response)
 
-        messages.append({"role": "assistant", "content": response})
         st.session_state.last_response = response
 
+    # PDF Download
     if "last_response" in st.session_state and "Request for Proposals" in st.session_state.last_response:
         if st.button("📄 Download RFP as PDF"):
             pdf = FPDF()
