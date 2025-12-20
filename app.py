@@ -149,29 +149,34 @@ At the end, offer: "Need on-site field validation or custom consulting? We offer
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        with st.chat_message("assistant"):
+               with st.chat_message("assistant"):
             response = ""
+            placeholder = st.empty()  # For smooth streaming
             for chunk in chat.stream():
-                if chunk.content:
-                    response += chunk.content
-                    st.write_stream(chunk.content)
+                if chunk.delta and chunk.delta.content:
+                    new_content = chunk.delta.content
+                    response += new_content
+                    placeholder.markdown(response + "▌")  # Cursor effect
+            placeholder.markdown(response)  # Final without cursor
 
-            st.markdown(response)
+        # Store full response for PDF
+        st.session_state.last_response = response
 
-        # PDF Download after RFP generated
-        if "Request for Proposals" in response:
-            if st.button("📄 Download RFP as PDF"):
-                pdf = FPDF()
-                pdf.add_page()
-                pdf.set_font("Arial", size=12)
-                pdf.multi_cell(0, 10, response)
-                pdf_output = "Custom_AMI_RFP.pdf"
-                pdf.output(pdf_output)
-                with open(pdf_output, "rb") as f:
-                    b64 = base64.b64encode(f.read()).decode()
-                    href = f'<a href="data:application/pdf;base64,{b64}" download="{pdf_output}">Click to download your RFP</a>'
-                    st.markdown(href, unsafe_allow_html=True)
+    # PDF Download after RFP generated
+    if "last_response" in st.session_state and "Request for Proposals" in st.session_state.last_response:
+        if st.button("📄 Download RFP as PDF"):
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", size=12)
+            pdf.multi_cell(0, 10, st.session_state.last_response)
+            pdf_output = "Custom_AMI_RFP.pdf"
+            pdf.output(pdf_output)
+            with open(pdf_output, "rb") as f:
+                b64 = base64.b64encode(f.read()).decode()
+                href = f'<a href="data:application/pdf;base64,{b64}" download="{pdf_output}">Click to download your RFP</a>'
+                st.markdown(href, unsafe_allow_html=True)
 
 st.markdown("---")
 
 st.caption("AMI Validate Solutions • Professional RFP + Optional Field Validation Services")
+
