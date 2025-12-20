@@ -6,10 +6,10 @@ import os
 from dotenv import load_dotenv
 from fpdf import FPDF
 import base64
+import json
 
 load_dotenv()
 
-# xAI client
 client = Client(api_key=os.getenv("GROK_API_KEY"))
 collection_id = os.getenv("GROK_COLLECTION_ID")
 
@@ -109,7 +109,6 @@ else:
             model="grok-4-latest",
             tools=tools
         )
-        # Add system prompt as assistant message
         chat.append(assistant("""
 You are an expert water AMI consultant with 20+ years experience helping small to mid-sized utilities create professional RFPs.
 
@@ -137,8 +136,8 @@ At the end, offer: "Need on-site field validation or custom consulting? We offer
 
     chat = st.session_state.chat
 
-    # Display chat history (skip system prompt)
-    for msg in chat.messages[1:]:
+    # Display chat history
+    for msg in chat.messages[1:]:  # skip system
         role = "human" if msg.role == "user" else "ai"
         with st.chat_message(role):
             st.markdown(msg.content)
