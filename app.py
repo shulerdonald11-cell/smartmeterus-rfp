@@ -149,15 +149,14 @@ At the end, offer: "Need on-site field validation or custom consulting? We offer
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        with st.chat_message("assistant"):
+    with st.chat_message("assistant"):
             response = ""
-            placeholder = st.empty()  # For smooth streaming
+            placeholder = st.empty()
             for chunk in chat.stream():
-                if chunk.delta and chunk.delta.content:
-                    new_content = chunk.delta.content
-                    response += new_content
+                if chunk.content:
+                    response += chunk.content
                     placeholder.markdown(response + "▌")  # Cursor effect
-            placeholder.markdown(response)  # Final without cursor
+            placeholder.markdown(response)
 
         # Store full response for PDF
         st.session_state.last_response = response
@@ -179,6 +178,7 @@ At the end, offer: "Need on-site field validation or custom consulting? We offer
 st.markdown("---")
 
 st.caption("AMI Validate Solutions • Professional RFP + Optional Field Validation Services")
+
 
 
 
