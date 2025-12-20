@@ -1,6 +1,5 @@
 import streamlit as st
-from xai_sdk import Client
-from xai_sdk.chat import user, assistant
+from openai import OpenAI
 import os
 from dotenv import load_dotenv
 from fpdf import FPDF
@@ -8,21 +7,23 @@ import base64
 
 load_dotenv()
 
-client = Client(api_key=os.getenv("GROK_API_KEY"))
+client = OpenAI(
+    api_key=os.getenv("GROK_API_KEY"),
+    base_url="https://api.x.ai/v1"
+)
 
 # Page config & styling
 st.set_page_config(page_title="AMI Validate Solutions", page_icon="💧", layout="centered")
 
-# Custom CSS — raises the chat input higher
 st.markdown("""
 <style>
-    .main {background-color: #f0f7fa; padding-bottom: 100px;}
+    .main {background-color: #f0f7fa;}
     .header {font-size: 42px; color: #006699; text-align: center; padding: 20px;}
     .subheader {font-size: 24px; color: #0088cc; text-align: center;}
     .info-box {background-color: #e6f5ff; padding: 20px; border-radius: 10px; border-left: 6px solid #006699;}
     .bullet {margin-left: 20px;}
-    /* Raise the chat input */
-    .stChatInput {position: fixed; bottom: 20px; width: 80%; left: 10%; z-index: 1000;}
+    /* Chat input higher */
+    div[data-testid="stChatInput"] {position: fixed; bottom: 30px; width: 80%; left: 10%; z-index: 1000;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -30,7 +31,6 @@ st.markdown("<div class='header'>💧 AMI Validate Solutions</div>", unsafe_allo
 st.markdown("<div class='subheader'>Professional Water AMI RFP Generator</div>", unsafe_allow_html=True)
 st.markdown("**20+ Years of Utility Expertise • Free Customized RFP in Minutes**")
 
-# Landing page state
 if "started" not in st.session_state:
     st.session_state.started = False
 
@@ -100,10 +100,11 @@ else:
     st.markdown("### 💬 Chat with Your AMI Expert")
     st.info("Paste answers from the questionnaire or just describe your project — I'll ask clarifying questions as needed.")
 
-    # Initialize chat (no RAG tool for stability — Grok's knowledge is excellent for RFPs)
-    if "chat" not in st.session_state:
-        chat = client.chat.create(model="grok-4-latest")
-        chat.append(assistant("""
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+        st.session_state.messages.append({
+            "role": "system",
+            "content": """
 You are an expert water AMI consultant with 20+ years experience helping small to mid-sized utilities create professional RFPs.
 
 Guide the user step-by-step:
@@ -123,40 +124,36 @@ Use these sections:
 Remain brand-neutral unless specified. Include timelines and evaluation focus on experience if provided.
 
 At the end, offer: "Need on-site field validation or custom consulting? We offer tiers starting at $10k or $250/hr."
-"""))
-        st.session_state.chat = chat
+"""
+        })
 
-    chat = st.session_state.chat
-
-    # Display chat history (skip system)
-    for msg in chat.messages[1:]:
-        role = "human" if msg.role == "user" else "ai"
+    for msg in st.session_state.messages[1:]:  # skip system
+        role = "human" if msg["role"] == "user" else "ai"
         with st.chat_message(role):
-            st.markdown(msg.content)
+            st.markdown(msg["content"])
 
-    # User input
     if prompt := st.chat_input("Tell me about your utility and AMI project..."):
-        chat.append(user(prompt))
+        st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("human"):
             st.markdown(prompt)
 
         with st.chat_message("ai"):
             response = ""
             placeholder = st.empty()
-            for chunk in chat.stream():
-                content = ""
-                if hasattr(chunk, 'content'):
-                    content = chunk.content or ""
-                elif hasattr(chunk, 'delta') and chunk.delta and hasattr(chunk.delta, 'content'):
-                    content = chunk.delta.content or ""
-                if content:
-                    response += content
+            stream = client.chat.completions.create(
+                model="grok-4-latest",
+                messages=st.session_state.messages,
+                stream=True
+            )
+            for chunk in stream:
+                if chunk.choices[0].delta.content:
+                    response += chunk.choices[0].delta.content
                     placeholder.markdown(response + "▌")
             placeholder.markdown(response)
 
+        st.session_state.messages.append({"role": "assistant", "content": response})
         st.session_state.last_response = response
 
-    # PDF Download
     if "last_response" in st.session_state and "Request for Proposals" in st.session_state.last_response:
         if st.button("📄 Download RFP as PDF"):
             pdf = FPDF()
