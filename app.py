@@ -1,6 +1,6 @@
 import streamlit as st
 from xai_sdk import Client
-from xai_sdk.chat import user
+from xai_sdk.chat import user, assistant
 from xai_sdk.tools import collections_search
 import os
 from dotenv import load_dotenv
@@ -135,8 +135,8 @@ At the end, offer: "Need on-site field validation or custom consulting? We offer
 
     chat = st.session_state.chat
 
-    # Display chat history
-    for msg in chat.messages[1:]:  # skip system
+    # Display chat history (skip system prompt)
+    for msg in chat.messages[1:]:
         role = "human" if msg.role == "user" else "ai"
         with st.chat_message(role):
             st.markdown(msg.content)
