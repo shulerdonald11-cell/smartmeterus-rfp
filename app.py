@@ -1,5 +1,7 @@
 import streamlit as st
-from openai import OpenAI
+from xai_sdk import Client
+from xai_sdk.chat import user, assistant
+from xai_sdk.tools import collections_search
 import os
 from dotenv import load_dotenv
 from fpdf import FPDF
@@ -7,10 +9,9 @@ import base64
 
 load_dotenv()
 
-client = OpenAI(
-    api_key=os.getenv("GROK_API_KEY"),
-    base_url="https://api.x.ai/v1"
-)
+# xAI client (native SDK for collections RAG)
+client = Client(api_key=os.getenv("GROK_API_KEY"))
+collection_id = os.getenv("GROK_COLLECTION_ID")
 
 # Page config with meter theme
 st.set_page_config(page_title="AMI Validate Solutions", page_icon="💧", layout="centered")
@@ -98,39 +99,77 @@ if not st.session_state.started:
     st.caption("Ready when you are. Click 'Get Started' to begin your custom RFP.")
 
 else:
-    # Chatbot Section (only shows after clicking Get Started)
+    # Chatbot Section (after Get Started)
     st.markdown("### 💬 Chat with Your AMI Expert")
     st.info("Paste answers from the questionnaire or just describe your project — I'll ask clarifying questions as needed.")
 
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+    if "chat" not in st.session_state:
+        tools = []
+        if collection_id:
+            tools = [collections_search(collection_ids=[collection_id])]
+        st.session_state.chat = client.chat.create(
+            model="grok-4-latest",
+            tools=tools
+        )
 
-    system_prompt = { "role": "system", "content": """[Your existing strong system prompt here — copy from previous version]""" }
+    chat = st.session_state.chat
 
-    if not any(m["role"] == "system" for m in st.session_state.messages):
-        st.session_state.messages.insert(0, system_prompt)
+    # System prompt
+    chat.append(assistant("""
+You are an expert water AMI consultant with 20+ years experience helping small to mid-sized utilities create professional RFPs.
 
-    for message in st.session_state.messages[1:]:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+Use the collections_search tool to retrieve real RFP language from the uploaded samples.
+
+Guide the user step-by-step:
+- Start with basics: meter count, sizes, utility name/location, current system.
+- Ask about project goals: turnkey, install-only, product-only, AMI features.
+- Probe details: retrofits, large meters, pit conditions, risks, WOMS.
+- When ready, generate a complete RFP pulling and synthesizing from collection samples.
+
+Use these sections:
+- Project Overview / Background
+- Scope of Work (include WOMS if turnkey)
+- Technical Specifications
+- Implementation Plan & Training
+- Pricing Schedule & Evaluation Criteria
+- Attachments / Appendices
+
+Remain brand-neutral unless specified. Include timelines and evaluation focus on experience if provided.
+
+At the end, offer: "Need on-site field validation or custom consulting? We offer tiers starting at $10k or $250/hr."
+"""))
+
+    for msg in chat.messages[1:]:  # skip system
+        with st.chat_message(msg.role):
+            st.markdown(msg.content)
 
     if prompt := st.chat_input("Tell me about your utility and AMI project..."):
-        st.session_state.messages.append({"role": "user", "content": prompt})
+        chat.append(user(prompt))
         with st.chat_message("user"):
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
-            api_messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
-            stream = client.chat.completions.create(
-                model="grok-4-latest",
-                messages=api_messages,
-                stream=True
-            )
-            response = st.write_stream(chunk.choices[0].delta.content or "" for chunk in stream)
+            response = ""
+            for chunk in chat.stream():
+                if chunk.content:
+                    response += chunk.content
+                    st.write_stream(chunk.content)
 
-        st.session_state.messages.append({"role": "assistant", "content": response})
+            st.markdown(response)
 
-    # Optional: Add PDF download after RFP generated (from previous suggestion)
+        # PDF Download after RFP generated
+        if "Request for Proposals" in response:
+            if st.button("📄 Download RFP as PDF"):
+                pdf = FPDF()
+                pdf.add_page()
+                pdf.set_font("Arial", size=12)
+                pdf.multi_cell(0, 10, response)
+                pdf_output = "Custom_AMI_RFP.pdf"
+                pdf.output(pdf_output)
+                with open(pdf_output, "rb") as f:
+                    b64 = base64.b64encode(f.read()).decode()
+                    href = f'<a href="data:application/pdf;base64,{b64}" download="{pdf_output}">Click to download your RFP</a>'
+                    st.markdown(href, unsafe_allow_html=True)
 
 st.markdown("---")
 st.caption("AMI Validate Solutions • Professional RFP + Optional Field Validation Services")
