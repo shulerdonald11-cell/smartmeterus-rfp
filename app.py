@@ -4,6 +4,9 @@ import os
 from dotenv import load_dotenv
 from fpdf import FPDF
 import base64
+import speech_recognition as sr
+from pydub import AudioSegment
+from pydub.silence import split_on_silence
 
 load_dotenv()
 
@@ -22,8 +25,6 @@ st.markdown("""
     .subheader {font-size: 24px; color: #0088cc; text-align: center;}
     .info-box {background-color: #e6f5ff; padding: 20px; border-radius: 10px; border-left: 6px solid #006699;}
     .bullet {margin-left: 20px;}
-    /* Chat input higher */
-    div[data-testid="stChatInput"] {position: fixed; bottom: 30px; width: 80%; left: 10%; z-index: 1000;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -31,6 +32,7 @@ st.markdown("<div class='header'>💧 AMI Validate Solutions</div>", unsafe_allo
 st.markdown("<div class='subheader'>Professional Water AMI RFP Generator</div>", unsafe_allow_html=True)
 st.markdown("**20+ Years of Utility Expertise • Free Customized RFP in Minutes**")
 
+# Landing page state
 if "started" not in st.session_state:
     st.session_state.started = False
 
@@ -102,42 +104,58 @@ else:
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
-        st.session_state.messages.append({
-            "role": "system",
-            "content": """
+
+    st.session_state.messages.append({"role": "system", "content": """
 You are an expert water AMI consultant with 20+ years experience helping small to mid-sized utilities create professional RFPs.
 
-Guide the user step-by-step:
-- Start with basics: meter count, sizes, utility name/location, current system.
-- Ask about project goals: turnkey, install-only, product-only, AMI features.
-- Probe details: retrofits, large meters, pit conditions, risks, WOMS.
-- Only generate the full RFP when the user has provided sufficient detail or says "generate the RFP".
+Always guide step-by-step to flush out details:
+- Ask about meter types and AMI system (e.g., compatibility if they have meters, endpoint types).
+- Ask about WOMS (contractor provide their own or use existing? Integration needs?)
+- Ask about billing CIS update process and field data collection management for meter exchanges.
+- Probe for more details if prompt is basic.
 
-Use these sections:
-- Project Overview / Background
-- Scope of Work (include WOMS if turnkey)
-- Technical Specifications
-- Implementation Plan & Training
-- Pricing Schedule & Evaluation Criteria
-- Attachments / Appendices
+Only generate the full RFP when you have sufficient info or user says "generate".
 
-Remain brand-neutral unless specified. Include timelines and evaluation focus on experience if provided.
+Use real-world U.S. water utility RFP language.
+"""})
 
-At the end, offer: "Need on-site field validation or custom consulting? We offer tiers starting at $10k or $250/hr."
-"""
-        })
-
+    # Display history
     for msg in st.session_state.messages[1:]:  # skip system
-        role = "human" if msg["role"] == "user" else "ai"
-        with st.chat_message(role):
+        with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    if prompt := st.chat_input("Tell me about your utility and AMI project..."):
+    # Voice input button
+    if st.button("🎤 Speak Your Prompt"):
+        audio = st.experimental_audio_input("Speak now...")
+        if audio:
+            audio_bytes = audio.getvalue()
+            with open("audio.wav", "wb") as f:
+                f.write(audio_bytes)
+            sound = AudioSegment.from_wav("audio.wav")
+            chunks = split_on_silence(sound, min_silence_len=500, silence_thresh=sound.dBFS-14)
+            whole_text = ""
+            for chunk in chunks:
+                chunk.export("chunk.wav", format="wav")
+                with sr.AudioFile("chunk.wav") as source:
+                    audio_listened = r.record(source)
+                    try:
+                        text = r.recognize_google(audio_listened)
+                        whole_text += text + " "
+                    except sr.UnknownValueError:
+                        pass
+            if whole_text:
+                st.session_state.prompt = whole_text
+            else:
+                st.error("Sorry, couldn't understand the audio.")
+
+    # User input (text or from voice)
+    prompt = st.session_state.get("prompt", "")
+    if prompt or (prompt := st.chat_input("Tell me about your utility and AMI project...")):
         st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("human"):
+        with st.chat_message("user"):
             st.markdown(prompt)
 
-        with st.chat_message("ai"):
+        with st.chat_message("assistant"):
             response = ""
             placeholder = st.empty()
             stream = client.chat.completions.create(
@@ -153,7 +171,9 @@ At the end, offer: "Need on-site field validation or custom consulting? We offer
 
         st.session_state.messages.append({"role": "assistant", "content": response})
         st.session_state.last_response = response
+        st.session_state.prompt = ""  # Clear voice prompt
 
+    # PDF Download
     if "last_response" in st.session_state and "Request for Proposals" in st.session_state.last_response:
         if st.button("📄 Download RFP as PDF"):
             pdf = FPDF()
