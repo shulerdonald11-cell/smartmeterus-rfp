@@ -9,14 +9,13 @@ import base64
 
 load_dotenv()
 
-# xAI client (native SDK for collections RAG)
+# xAI client
 client = Client(api_key=os.getenv("GROK_API_KEY"))
 collection_id = os.getenv("GROK_COLLECTION_ID")
 
-# Page config with meter theme
+# Page config & styling
 st.set_page_config(page_title="AMI Validate Solutions", page_icon="💧", layout="centered")
 
-# Custom CSS for cooler, meter/utility look
 st.markdown("""
 <style>
     .main {background-color: #f0f7fa;}
@@ -31,7 +30,7 @@ st.markdown("<div class='header'>💧 AMI Validate Solutions</div>", unsafe_allo
 st.markdown("<div class='subheader'>Professional Water AMI RFP Generator</div>", unsafe_allow_html=True)
 st.markdown("**20+ Years of Utility Expertise • Free Customized RFP in Minutes**")
 
-# Welcome / Landing Section
+# Landing page state
 if "started" not in st.session_state:
     st.session_state.started = False
 
@@ -61,7 +60,6 @@ if not st.session_state.started:
 
     col1, col2 = st.columns(2)
     with col1:
-        # Downloadable Questionnaire PDF
         if st.button("📄 Download Questionnaire Template (PDF)", use_container_width=True):
             pdf = FPDF()
             pdf.add_page()
@@ -71,13 +69,13 @@ if not st.session_state.started:
             pdf.set_font("Arial", size=12)
             questions = [
                 "1. Utility Name & Location:",
-                "2. Total Meters & Sizes (e.g., 5/8x3/4, 1, 2):",
+                "2. Total Meters & Sizes:",
                 "3. Current Reading System:",
                 "4. Project Type (turnkey / install-only / product-only):",
                 "5. Desired Start Date & Bid Due Date:",
                 "6. Expected Deployment Duration:",
-                "7. Known Site Risks (buried pits, traffic, etc.):",
-                "8. Need Field Survey for Risk Assessment? (Recommended)",
+                "7. Known Site Risks:",
+                "8. Need Field Survey? (Recommended)",
                 "9. Additional Notes:"
             ]
             for q in questions:
@@ -99,10 +97,10 @@ if not st.session_state.started:
     st.caption("Ready when you are. Click 'Get Started' to begin your custom RFP.")
 
 else:
-    # Chatbot Section (after Get Started)
     st.markdown("### 💬 Chat with Your AMI Expert")
     st.info("Paste answers from the questionnaire or just describe your project — I'll ask clarifying questions as needed.")
 
+    # Initialize chat with RAG tool
     if "chat" not in st.session_state:
         tools = []
         if collection_id:
@@ -139,29 +137,31 @@ Remain brand-neutral unless specified. Include timelines and evaluation focus on
 At the end, offer: "Need on-site field validation or custom consulting? We offer tiers starting at $10k or $250/hr."
 """))
 
+    # Display chat history
     for msg in chat.messages[1:]:  # skip system
-        role = "human" if msg.role == "user" else "ai"   # Streamlit only accepts human/ai
+        role = "human" if msg.role == "user" else "ai"
         with st.chat_message(role):
             st.markdown(msg.content)
 
-        if prompt := st.chat_input("Tell me about your utility and AMI project..."):
+    # User input
+    if prompt := st.chat_input("Tell me about your utility and AMI project..."):
         chat.append(user(prompt))
-        with st.chat_message("user"):
+        with st.chat_message("human"):
             st.markdown(prompt)
 
-        with st.chat_message("assistant"):
+        with st.chat_message("ai"):
             response = ""
             placeholder = st.empty()
             for chunk in chat.stream():
                 if chunk.content:
                     response += chunk.content
-                    placeholder.markdown(response + "▌")  # Cursor effect
+                    placeholder.markdown(response + "▌")
             placeholder.markdown(response)
 
-        # Store full response for PDF
+        # Store for PDF
         st.session_state.last_response = response
 
-    # PDF Download after RFP generated
+    # PDF Download
     if "last_response" in st.session_state and "Request for Proposals" in st.session_state.last_response:
         if st.button("📄 Download RFP as PDF"):
             pdf = FPDF()
@@ -176,10 +176,4 @@ At the end, offer: "Need on-site field validation or custom consulting? We offer
                 st.markdown(href, unsafe_allow_html=True)
 
 st.markdown("---")
-
 st.caption("AMI Validate Solutions • Professional RFP + Optional Field Validation Services")
-
-
-
-
-
