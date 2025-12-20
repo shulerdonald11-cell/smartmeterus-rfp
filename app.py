@@ -140,7 +140,8 @@ At the end, offer: "Need on-site field validation or custom consulting? We offer
 """))
 
     for msg in chat.messages[1:]:  # skip system
-        with st.chat_message(msg.role):
+        role = "human" if msg.role == "user" else "ai"   # Streamlit only accepts human/ai
+        with st.chat_message(role):
             st.markdown(msg.content)
 
     if prompt := st.chat_input("Tell me about your utility and AMI project..."):
@@ -172,4 +173,5 @@ At the end, offer: "Need on-site field validation or custom consulting? We offer
                     st.markdown(href, unsafe_allow_html=True)
 
 st.markdown("---")
+
 st.caption("AMI Validate Solutions • Professional RFP + Optional Field Validation Services")
