@@ -1,0 +1,206 @@
+{
+  "rulesVersion": "1.0.0",
+  "domain": {
+    "vertical": "water",
+    "includedSets": ["pit", "inside_set"]
+  },
+  "notes": [
+    "This is a generic branch engine ruleset scaffold.",
+    "Populate questionId values, token names, and risk codes from your LOCKED artifacts:",
+    " - Water PIT Questions (LOCKED)",
+    " - Inside Set Questions v1.0.1 (LOCKED)",
+    " - AnswerTokenRegistry v2 (LOCKED)",
+    " - Execution Order & Runtime Flow Spec v1.0 (LOCKED)"
+  ],
+  "engineContract": {
+    "input": {
+      "sessionStateSchema": "Scope Session State — Water (PIT + Inside Set) v1.0",
+      "event": {
+        "type": "ANSWER_SUBMITTED",
+        "set": "pit|inside_set",
+        "questionId": "string",
+        "answer": "any"
+      }
+    },
+    "output": {
+      "actions": [
+        "EMIT_TOKENS",
+        "SET_RISK_FLAG",
+        "ADD_ESCALATION",
+        "QUEUE_NEXT_QUESTION",
+        "SKIP_QUESTION",
+        "SET_STATUS"
+      ]
+    }
+  },
+  "execution": {
+    "defaultUnknownHandling": {
+      "answerValueTypesTreatedAsUnknown": ["unknown"],
+      "whenUnknown": {
+        "setRiskFlag": {
+          "severity": "unknown",
+          "code": "UNKNOWN_ANSWER",
+          "message": "An answer was marked unknown; field validation may be required."
+        }
+      }
+    },
+    "conflictPolicy": {
+      "onTokenCollision": "keep_all_instances",
+      "onAnswerOverwrite": "append_history_keep_latest"
+    }
+  },
+  "tokenEmission": {
+    "sourceOfTruth": "AnswerTokenRegistry v2 (LOCKED)",
+    "mode": "registry_driven",
+    "mappingHints": {
+      "byQuestionId": true,
+      "byAnswerValue": true
+    }
+  },
+  "riskModel": {
+    "severityOrder": ["none", "low", "medium", "high", "critical", "unknown"],
+    "aggregation": {
+      "overallSeverity": "max"
+    }
+  },
+  "sets": {
+    "pit": {
+      "entry": {
+        "startQuestionId": "P01",
+        "completionRule": {
+          "type": "all_required_answered_or_escalation"
+        }
+      }
+    },
+    "inside_set": {
+      "entry": {
+        "startQuestionId": "I01",
+        "completionRule": {
+          "type": "all_required_answered_or_escalation"
+        }
+      }
+    }
+  },
+  "rules": [
+    {
+      "id": "R-BASE-01",
+      "description": "Always record the answer and emit tokens per AnswerTokenRegistry v2.",
+      "when": {
+        "eventType": "ANSWER_SUBMITTED"
+      },
+      "then": [
+        {
+          "action": "EMIT_TOKENS",
+          "params": {
+            "from": "registry",
+            "questionIdFromEvent": true,
+            "answerFromEvent": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-BASE-02",
+      "description": "If an answer is unknown, raise an unknown risk flag and suggest field validation.",
+      "when": {
+        "eventType": "ANSWER_SUBMITTED",
+        "answerValueTypeIn": ["unknown"]
+      },
+      "then": [
+        {
+          "action": "SET_RISK_FLAG",
+          "params": {
+            "code": "UNKNOWN_ANSWER",
+            "severity": "unknown",
+            "message": "Answer recorded as unknown; recommend field validation.",
+            "recommendation": "Perform onsite validation (photos/locate/records) to resolve unknown."
+          }
+        },
+        {
+          "action": "ADD_ESCALATION",
+          "params": {
+            "type": "field_validation",
+            "severity": "unknown",
+            "reason": "Unknown answer requires verification before procurement-ready scope.",
+            "recommendedAction": "SMUS or utility field verification recommended."
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "R-GATE-LEAD-01",
+      "description": "If lead service line is present/suspected, escalate and (optionally) stop early based on your flow spec.",
+      "when": {
+        "eventType": "ANSWER_SUBMITTED",
+        "questionIdIn": ["I14a"],
+        "tokenAnyOf": ["LEAD_SERVICE_LINE_PRESENT", "LEAD_SERVICE_LINE_SUSPECTED"]
+      },
+      "then": [
+        {
+          "action": "SET_RISK_FLAG",
+          "params": {
+            "code": "LEAD_RISK",
+            "severity": "high",
+            "message": "Lead service line present or suspected.",
+            "recommendation": "Initiate LSL protocol, verify material, coordinate replacement/notification requirements."
+          }
+        },
+        {
+          "action": "ADD_ESCALATION",
+          "params": {
+            "type": "utility_review",
+            "severity": "high",
+            "reason": "Lead risk affects scope, safety, and compliance requirements.",
+            "recommendedAction": "Utility review required; SMUS onsite audit recommended for verification and planning."
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "R-NEXT-DEFAULT-01",
+      "description": "Queue next question based on the Execution Order & Runtime Flow Spec. If an explicit queue exists, use it; else fall back to sequential ordering.",
+      "when": {
+        "eventType": "ANSWER_SUBMITTED"
+      },
+      "then": [
+        {
+          "action": "QUEUE_NEXT_QUESTION",
+          "params": {
+            "strategy": "use_nextQueue_else_sequential",
+            "sequentialOrderSource": "runtime_flow_spec",
+            "allowSkipIfNotApplicable": true
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "R-STOP-CRITICAL-01",
+      "description": "If any critical risk flag is present, mark session as awaiting review (stop-and-escalate) per governance.",
+      "when": {
+        "eventType": "ANSWER_SUBMITTED",
+        "riskOverallSeverityIn": ["critical"]
+      },
+      "then": [
+        {
+          "action": "SET_STATUS",
+          "params": {
+            "phase": "awaiting_review",
+            "isComplete": false,
+            "completionReason": "stopped_for_escalation"
+          }
+        }
+      ]
+    }
+  ],
+  "placeholdersToFill": {
+    "required": [
+      "Replace startQuestionId for PIT/Inside if different",
+      "Replace sequential order source with your exact ordered list (Pxx/Ixx)",
+      "Replace token names (LEAD_*) and questionId (I14a) with your actual registry/token names if they differ",
+      "Add remaining gating rules from your runtime flow spec (access issues, pit conditions, meter size/material, etc.)"
+    ]
+  }
+}
