@@ -7,7 +7,6 @@ import base64
 
 from flow_engine import FlowEngine
 
-
 load_dotenv()
 
 client = OpenAI(
@@ -15,21 +14,24 @@ client = OpenAI(
     base_url="https://api.x.ai/v1"
 )
 
-# Page config & styling
 st.set_page_config(page_title="AMI Validate Solutions", page_icon="💧", layout="centered")
+
 # ---------------------------
 # Guided Scope Builder Engine
 # ---------------------------
 if "flow_engine" not in st.session_state:
-    st.session_state.flow_engine = FlowEngine(
-        base_path="BUILD_ARTIFACTS/Schemas"
-    )
+    # IMPORTANT: this path must exist inside your repo on Streamlit Cloud
+    # Make sure your JSON artifacts are committed under BUILD_ARTIFACTS/Schemas
+    st.session_state.flow_engine = FlowEngine(base_path="BUILD_ARTIFACTS/Schemas")
 
 if "flow_session" not in st.session_state:
     st.session_state.flow_session = None
 
-
-st.markdown("""
+# ---------------------------
+# Styling / Headers
+# ---------------------------
+st.markdown(
+    """
 <style>
     .main {background-color: #f0f7fa;}
     .header {font-size: 42px; color: #006699; text-align: center; padding: 20px;}
@@ -37,51 +39,61 @@ st.markdown("""
     .info-box {background-color: #e6f5ff; padding: 20px; border-radius: 10px; border-left: 6px solid #006699;}
     .bullet {margin-left: 20px;}
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True
+)
 
 st.markdown("<div class='header'>💧 AMI Validate Solutions</div>", unsafe_allow_html=True)
 st.markdown("<div class='subheader'>Professional Water AMI RFP Generator</div>", unsafe_allow_html=True)
 st.markdown("**20+ Years of Utility Expertise • Free Customized RFP in Minutes**")
+
 guided_mode = st.toggle(
     "🧭 Guided Scope Builder (Beta)",
     value=True,
     help="Uses a structured question flow instead of free-form chat."
 )
+
 if guided_mode and st.session_state.flow_session is None:
-    st.session_state.flow_session = (
-        st.session_state.flow_engine.start_session()
-    )
+    st.session_state.flow_session = st.session_state.flow_engine.start_session()
 
-
-# Landing page state
+# ---------------------------
+# Landing page gate
+# ---------------------------
 if "started" not in st.session_state:
     st.session_state.started = False
 
 if not st.session_state.started:
-    st.markdown("""
+    st.markdown(
+        """
     <div class='info-box'>
     <h3>Welcome! Let's Build Your AMI RFP</h3>
     <p>I'll guide you step-by-step to create a professional, bid-ready RFP tailored to your utility.</p>
     <p><strong>Best Practice Tip:</strong> For the strongest project outcome, we recommend a pre-deployment field survey (even a small sample) to identify risks like buried pits, traffic hazards, or compatibility issues. This reduces change orders and failed installations by up to 50%. We offer paid validation services starting at $10k if you'd like expert help.</p>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True
+    )
 
     st.markdown("### To get the most accurate RFP, have this information ready:")
-    st.markdown("""
+    st.markdown(
+        """
     <ul class='bullet'>
     <li>Utility name and location</li>
-    <li>Number of meters and sizes (e.g., 2,000 × 5/8"x3/4", 100 × 1")</li>
+    <li>Number of meters and sizes (e.g., 2,000 × 5/8&quot;x3/4&quot;, 100 × 1&quot;)</li>
     <li>Current reading system (manual, drive-by AMR, partial AMI?)</li>
     <li>Project goals: Full AMI? Meter replacement only? Turnkey or install-only?</li>
     <li>Preferred start date and bid due date</li>
     <li>Expected deployment duration (e.g., 3–6 months)</li>
     <li>Known site risks (buried pits, downtown traffic, flood-prone areas?)</li>
-    <li>Any large meters (>2") or special requirements</li>
+    <li>Any large meters (&gt;2&quot;) or special requirements</li>
     <li>Need for training, WOMS integration, or post-install support?</li>
     </ul>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True
+    )
 
     col1, col2 = st.columns(2)
+
     with col1:
         if st.button("📄 Download Questionnaire Template (PDF)", use_container_width=True):
             pdf = FPDF()
@@ -104,6 +116,7 @@ if not st.session_state.started:
             for q in questions:
                 pdf.multi_cell(0, 10, q)
                 pdf.ln(5)
+
             pdf_output = "AMI_RFP_Questionnaire.pdf"
             pdf.output(pdf_output)
             with open(pdf_output, "rb") as f:
@@ -112,7 +125,7 @@ if not st.session_state.started:
                 st.markdown(href, unsafe_allow_html=True)
 
     with col2:
-        if st.button("🚀 Get Started – Begin Chat Now", type="primary", use_container_width=True):
+        if st.button("🚀 Get Started – Begin Now", type="primary", use_container_width=True):
             st.session_state.started = True
             st.rerun()
 
@@ -121,15 +134,14 @@ if not st.session_state.started:
 
 else:
     st.markdown("### 💬 Chat with Your AMI Expert")
-    st.info("Paste answers from the questionnaire or just describe your project — I'll ask clarifying questions as needed.")
+    st.info("Chat stays available as a helper. Guided Mode controls question order.")
+
     # ---------------------------
     # Guided Scope Builder UI
     # ---------------------------
     if guided_mode and st.session_state.flow_session:
-
         engine = st.session_state.flow_engine
         session = st.session_state.flow_session
-
         current_question = engine.get_current_question(session)
 
         if current_question:
@@ -137,8 +149,7 @@ else:
             st.markdown(current_question["prompt"])
 
             answer = None
-
-            if current_question["answerType"] == "single":
+            if current_question.get("answerType") == "single":
                 answer = st.radio(
                     "Select one:",
                     current_question.get("options", []),
@@ -152,12 +163,13 @@ else:
                     value_type="single"
                 )
                 st.rerun()
-
         else:
             st.success("✅ Scope questions complete.")
             st.json(st.session_state.flow_session)
 
-    
+    # ---------------------------
+    # Chat initialization (helper-only when guided_mode is ON)
+    # ---------------------------
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
@@ -182,18 +194,15 @@ Only generate the full RFP when the user has provided sufficient detail or says 
 Use real-world U.S. water utility RFP language and structure.
 """
 
-        st.session_state.messages.append({
-            "role": "system",
-            "content": system_prompt
-        })
+        st.session_state.messages.append({"role": "system", "content": system_prompt})
 
-# Display chat history
+    # Display chat history
     for msg in st.session_state.messages[1:]:
         with st.chat_message("user" if msg["role"] == "user" else "assistant"):
             st.markdown(msg["content"])
 
-    # User input (helper-only when guided_mode is ON)
-    if prompt := st.chat_input("Tell me about your utility and AMI project..."):
+    # User input
+    if prompt := st.chat_input("Ask for clarification, or describe your project..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -207,7 +216,7 @@ Use real-world U.S. water utility RFP language and structure.
                 stream=True
             )
             for chunk in stream:
-                if chunk.choices[0].delta.content:
+                if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
                     response += chunk.choices[0].delta.content
                     placeholder.markdown(response + "▌")
             placeholder.markdown(response)
@@ -215,7 +224,7 @@ Use real-world U.S. water utility RFP language and structure.
         st.session_state.messages.append({"role": "assistant", "content": response})
         st.session_state.last_response = response
 
-    # PDF Download
+    # PDF Download (kept as-is)
     if "last_response" in st.session_state and "Request for Proposals" in st.session_state.last_response:
         if st.button("📄 Download RFP as PDF"):
             pdf = FPDF()
@@ -229,12 +238,5 @@ Use real-world U.S. water utility RFP language and structure.
                 href = f'<a href="data:application/pdf;base64,{b64}" download="{pdf_output}">Click to download your RFP</a>'
                 st.markdown(href, unsafe_allow_html=True)
 
-
-
 st.markdown("---")
 st.caption("AMI Validate Solutions • Professional RFP + Optional Field Validation Services")
-
-
-
-
-
