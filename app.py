@@ -161,7 +161,7 @@ else:
     if "messages" not in st.session_state:
         st.session_state.messages = []
        if guided_mode:
-    system_prompt = (
+        system_prompt = (
         "You are a helper assistant. "
         "You may explain questions or terminology, "
         "but you may NOT choose questions or change their order."
@@ -232,5 +232,6 @@ st.session_state.messages.append({
 
 st.markdown("---")
 st.caption("AMI Validate Solutions • Professional RFP + Optional Field Validation Services")
+
 
 
