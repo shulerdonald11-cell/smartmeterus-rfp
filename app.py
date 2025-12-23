@@ -187,20 +187,12 @@ Use real-world U.S. water utility RFP language and structure.
             "content": system_prompt
         })
 
-
-st.session_state.messages.append({
-    "role": "system",
-    "content": system_prompt
-})
-
-
-
-    # Display chat history
+# Display chat history
     for msg in st.session_state.messages[1:]:
         with st.chat_message("user" if msg["role"] == "user" else "assistant"):
             st.markdown(msg["content"])
 
-    # User input
+    # User input (helper-only when guided_mode is ON)
     if prompt := st.chat_input("Tell me about your utility and AMI project..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
@@ -237,8 +229,11 @@ st.session_state.messages.append({
                 href = f'<a href="data:application/pdf;base64,{b64}" download="{pdf_output}">Click to download your RFP</a>'
                 st.markdown(href, unsafe_allow_html=True)
 
+
+
 st.markdown("---")
 st.caption("AMI Validate Solutions • Professional RFP + Optional Field Validation Services")
+
 
 
 
