@@ -5,6 +5,9 @@ from dotenv import load_dotenv
 from fpdf import FPDF
 import base64
 
+from flow_engine import FlowEngine
+
+
 load_dotenv()
 
 client = OpenAI(
@@ -14,6 +17,17 @@ client = OpenAI(
 
 # Page config & styling
 st.set_page_config(page_title="AMI Validate Solutions", page_icon="💧", layout="centered")
+# ---------------------------
+# Guided Scope Builder Engine
+# ---------------------------
+if "flow_engine" not in st.session_state:
+    st.session_state.flow_engine = FlowEngine(
+        base_path="BUILD_ARTIFACTS/Schemas"
+    )
+
+if "flow_session" not in st.session_state:
+    st.session_state.flow_session = None
+
 
 st.markdown("""
 <style>
@@ -28,6 +42,16 @@ st.markdown("""
 st.markdown("<div class='header'>💧 AMI Validate Solutions</div>", unsafe_allow_html=True)
 st.markdown("<div class='subheader'>Professional Water AMI RFP Generator</div>", unsafe_allow_html=True)
 st.markdown("**20+ Years of Utility Expertise • Free Customized RFP in Minutes**")
+guided_mode = st.toggle(
+    "🧭 Guided Scope Builder (Beta)",
+    value=True,
+    help="Uses a structured question flow instead of free-form chat."
+)
+if guided_mode and st.session_state.flow_session is None:
+    st.session_state.flow_session = (
+        st.session_state.flow_engine.start_session()
+    )
+
 
 # Landing page state
 if "started" not in st.session_state:
@@ -98,12 +122,52 @@ if not st.session_state.started:
 else:
     st.markdown("### 💬 Chat with Your AMI Expert")
     st.info("Paste answers from the questionnaire or just describe your project — I'll ask clarifying questions as needed.")
+    # ---------------------------
+    # Guided Scope Builder UI
+    # ---------------------------
+    if guided_mode and st.session_state.flow_session:
 
+        engine = st.session_state.flow_engine
+        session = st.session_state.flow_session
+
+        current_question = engine.get_current_question(session)
+
+        if current_question:
+            st.subheader("🧭 Guided Scope Questions")
+            st.markdown(current_question["prompt"])
+
+            answer = None
+
+            if current_question["answerType"] == "single":
+                answer = st.radio(
+                    "Select one:",
+                    current_question.get("options", []),
+                    key=f"guided_{current_question['questionId']}"
+                )
+
+            if st.button("Next"):
+                st.session_state.flow_session = engine.submit_answer(
+                    session=session,
+                    answer_value=answer,
+                    value_type="single"
+                )
+                st.rerun()
+
+        else:
+            st.success("✅ Scope questions complete.")
+            st.json(st.session_state.flow_session)
+
+    
     if "messages" not in st.session_state:
         st.session_state.messages = []
         st.session_state.messages.append({
             "role": "system",
-            "content": """
+            "content": (
+    "You are a helper assistant. "
+    "You may explain questions or terminology, "
+    "but you may NOT choose questions or change their order."
+    if guided_mode else
+    """
 You are an expert water AMI consultant with 20+ years experience helping small to mid-sized utilities create professional RFPs.
 
 Always guide step-by-step to flush out details:
@@ -116,7 +180,8 @@ Only generate the full RFP when the user has provided sufficient detail or says 
 
 Use real-world U.S. water utility RFP language and structure.
 """
-        })
+)
+
 
     # Display chat history
     for msg in st.session_state.messages[1:]:
@@ -162,3 +227,4 @@ Use real-world U.S. water utility RFP language and structure.
 
 st.markdown("---")
 st.caption("AMI Validate Solutions • Professional RFP + Optional Field Validation Services")
+
