@@ -160,14 +160,15 @@ else:
     
     if "messages" not in st.session_state:
         st.session_state.messages = []
-       if guided_mode:
-        system_prompt = (
-        "You are a helper assistant. "
-        "You may explain questions or terminology, "
-        "but you may NOT choose questions or change their order."
-    )
-else:
-    system_prompt = """
+
+        if guided_mode:
+            system_prompt = (
+                "You are a helper assistant. "
+                "You may explain questions or terminology, "
+                "but you may NOT choose questions or change their order."
+            )
+        else:
+            system_prompt = """
 You are an expert water AMI consultant with 20+ years experience helping small to mid-sized utilities create professional RFPs.
 
 Always guide step-by-step to flush out details:
@@ -180,6 +181,12 @@ Only generate the full RFP when the user has provided sufficient detail or says 
 
 Use real-world U.S. water utility RFP language and structure.
 """
+
+        st.session_state.messages.append({
+            "role": "system",
+            "content": system_prompt
+        })
+
 
 st.session_state.messages.append({
     "role": "system",
@@ -232,6 +239,7 @@ st.session_state.messages.append({
 
 st.markdown("---")
 st.caption("AMI Validate Solutions • Professional RFP + Optional Field Validation Services")
+
 
 
 
