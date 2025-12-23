@@ -1,20 +1,631 @@
 {
   "questions": [
     {
-      "questionId": "P01",
+      "questionId": "A1",
       "set": "pit",
-      "prompt": "TEST: PIT question placeholder (replace with your real P01 prompt later).",
+      "prompt": "Is there a target start date for field installation activities?",
       "answerType": "single",
-      "options": ["Yes", "No", "Unknown"],
-      "required": true
+      "options": ["Yes (date)", "No", "TBD"],
+      "required": false
+    },
+    {
+      "questionId": "A2",
+      "set": "pit",
+      "prompt": "What is the anticipated duration of the installation phase?",
+      "answerType": "single",
+      "options": ["<3 months", "3–6 months", "6–12 months", ">12 months", "Unknown"],
+      "required": false
+    },
+    {
+      "questionId": "A3",
+      "set": "pit",
+      "prompt": "Will the project be executed in multiple phases (e.g., pilot, rollout, zones)?",
+      "answerType": "single",
+      "options": ["Yes", "No", "Not sure"],
+      "required": false
+    },
+    {
+      "questionId": "A4",
+      "set": "pit",
+      "prompt": "Are there any labor compliance or workforce requirements applicable to this project?",
+      "answerType": "multi",
+      "options": [
+        "State or local prevailing wage",
+        "Federal Davis-Bacon",
+        "Project Labor Agreement (PLA)",
+        "Union labor requirements (without PLA)",
+        "None",
+        "Not sure"
+      ],
+      "required": false
+    },
+    {
+      "questionId": "A5",
+      "set": "pit",
+      "prompt": "Are there any state or local licensing requirements for contractors performing meter installation work?",
+      "answerType": "single",
+      "options": ["Yes", "No", "Not sure"],
+      "required": false
+    },
+    {
+      "questionId": "A6",
+      "set": "pit",
+      "prompt": "Are there specific insurance requirements beyond standard utility contractor coverage?",
+      "answerType": "single",
+      "options": ["Yes", "No", "Not sure"],
+      "required": false
+    },
+    {
+      "questionId": "A7",
+      "set": "pit",
+      "prompt": "Are there any small business, MBE/WBE, or similar participation requirements?",
+      "answerType": "single",
+      "options": ["Yes", "No", "Not sure"],
+      "required": false
+    },
+    {
+      "questionId": "B1",
+      "set": "pit",
+      "prompt": "What type(s) of existing meters or endpoints are expected to be removed?",
+      "answerType": "single",
+      "options": ["Mechanical", "AMR", "AMI", "Mixed", "Unknown"],
+      "required": false
+    },
+    {
+      "questionId": "B2",
+      "set": "pit",
+      "prompt": "What is the predominant material of existing water meters?",
+      "answerType": "single",
+      "options": ["Brass", "Plastic", "Mixed", "Unknown"],
+      "required": false
+    },
+    {
+      "questionId": "B3",
+      "set": "pit",
+      "prompt": "Will the Utility provide a service-level data file to support installation planning?",
+      "answerType": "single",
+      "options": ["Yes", "No", "Not sure"],
+      "required": false
+    },
+    {
+      "questionId": "B3a",
+      "set": "pit",
+      "prompt": "If Yes, data may include (select all that apply).",
+      "answerType": "multi",
+      "options": [
+        "Service addresses",
+        "Route numbers",
+        "Read sequence",
+        "Meter sizes",
+        "Existing meter serial numbers",
+        "Existing endpoint IDs",
+        "GPS coordinates",
+        "Notes on difficult-to-locate meters"
+      ],
+      "required": false
+    },
+    {
+      "questionId": "C1",
+      "set": "pit",
+      "prompt": "What customer notification or outreach activities are required?",
+      "answerType": "multi",
+      "options": ["Pre-install notification", "Post-install notification", "Door hangers", "None specified", "Not sure"],
+      "required": false
+    },
+    {
+      "questionId": "C2",
+      "set": "pit",
+      "prompt": "Who is responsible for outreach materials and distribution?",
+      "answerType": "single",
+      "options": ["Utility", "Contractor", "Shared", "Not sure"],
+      "required": false
+    },
+    {
+      "questionId": "C3",
+      "set": "pit",
+      "prompt": "Are outreach materials required in languages other than English?",
+      "answerType": "single",
+      "options": ["Yes", "No", "Not sure"],
+      "required": false
+    },
+    {
+      "questionId": "C4",
+      "set": "pit",
+      "prompt": "Will the contractor be required to provide customer support or a call center?",
+      "answerType": "single",
+      "options": ["Yes", "No", "Not sure"],
+      "required": false
+    },
+    {
+      "questionId": "D1",
+      "set": "pit",
+      "prompt": "Who will be responsible for storing new meters and materials?",
+      "answerType": "single",
+      "options": ["Utility", "Contractor", "Shared", "Not sure"],
+      "required": false
+    },
+    {
+      "questionId": "D2",
+      "set": "pit",
+      "prompt": "Will a centralized staging or warehouse location be provided?",
+      "answerType": "single",
+      "options": ["Yes", "No", "Not sure"],
+      "required": false
+    },
+    {
+      "questionId": "D3",
+      "set": "pit",
+      "prompt": "Who is responsible for disposal of the following materials?",
+      "answerType": "matrix_single_per_item",
+      "options": ["Utility", "Contractor", "Shared", "TBD"],
+      "items": [
+        "Salvageable meters/lids",
+        "Recyclables",
+        "Spoils/debris",
+        "Hazardous waste (batteries/endpoints)"
+      ],
+      "required": false
+    },
+    {
+      "questionId": "E1",
+      "set": "pit",
+      "prompt": "What best describes the overall meter deployment approach?",
+      "answerType": "single",
+      "options": ["Full replacement", "Targeted replacement", "Hybrid", "Retrofit-only", "Unknown"],
+      "required": false
+    },
+    {
+      "questionId": "E2",
+      "set": "pit",
+      "prompt": "Are there existing AMI/AMR systems that will remain in place?",
+      "answerType": "single",
+      "options": ["Yes", "No", "Partially", "Not sure"],
+      "required": false
+    },
+    {
+      "questionId": "E3",
+      "set": "pit",
+      "prompt": "How frequently are skipped locations expected?",
+      "answerType": "single",
+      "options": ["<5%", "5–15%", "15–30%", ">30%", "Unknown"],
+      "required": false
+    },
+    {
+      "questionId": "E4",
+      "set": "pit",
+      "prompt": "Will work orders be geographically contiguous?",
+      "answerType": "single",
+      "options": ["Yes", "Mostly", "Mixed", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "E5",
+      "set": "pit",
+      "prompt": "Who defines route boundaries and sequencing?",
+      "answerType": "single",
+      "options": ["Utility", "Contractor", "Shared", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "E5a",
+      "set": "pit",
+      "prompt": "Billing Coordination: Are billing blackouts or rebill windows required?",
+      "answerType": "single",
+      "options": ["Yes", "No", "Not sure"],
+      "required": false
+    },
+    {
+      "questionId": "E6",
+      "set": "pit",
+      "prompt": "Will route-level completion thresholds be required before advancing?",
+      "answerType": "single",
+      "options": ["Yes", "No", "Under consideration", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "E7",
+      "set": "pit",
+      "prompt": "How is route completion defined?",
+      "answerType": "multi",
+      "options": ["Completed installs", "Customer refusals", "RTU logged", "UIR logged", "Final reconciliation"],
+      "required": false
+    },
+    {
+      "questionId": "E8",
+      "set": "pit",
+      "prompt": "How should locations outside contractor scope be handled?",
+      "answerType": "single",
+      "options": ["Logged & returned", "Separate contingency", "Removed from scope", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "E9",
+      "set": "pit",
+      "prompt": "How should locations requiring utility action be handled?",
+      "answerType": "single",
+      "options": ["Utility resolves", "Contractor authorized upon approval", "Combination", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "E10",
+      "set": "pit",
+      "prompt": "If RTU/UIR items remain unresolved due to utility-side delays, may the contractor advance to new routes?",
+      "answerType": "single",
+      "options": ["Yes", "No", "Case-by-case", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "E11",
+      "set": "pit",
+      "prompt": "Are seasonal, freeze, flooding, or groundwater conditions expected?",
+      "answerType": "single",
+      "options": ["Yes", "No", "Some areas", "Unknown"],
+      "required": false
+    },
+    {
+      "questionId": "E12",
+      "set": "pit",
+      "prompt": "Are any meters located in historic districts or areas with aesthetic restrictions?",
+      "answerType": "single",
+      "options": ["Yes", "No", "Not sure"],
+      "required": false
+    },
+    {
+      "questionId": "E13",
+      "set": "pit",
+      "prompt": "Will the Utility provide a master CIS/service data file?",
+      "answerType": "single",
+      "options": ["Yes", "No", "Not sure"],
+      "required": false
+    },
+    {
+      "questionId": "E13a",
+      "set": "pit",
+      "prompt": "Data Refresh Frequency",
+      "answerType": "single",
+      "options": ["Daily", "Weekly", "Monthly", "One-time", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "E14a",
+      "set": "pit",
+      "prompt": "Data Exchange Method",
+      "answerType": "single",
+      "options": ["Automated integration", "Secure file transfer", "Spreadsheet/manual", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "E15",
+      "set": "pit",
+      "prompt": "How should data mismatches or exceptions be handled?",
+      "answerType": "single",
+      "options": ["Contractor correction", "Utility resolution", "Exception workflow", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "E16",
+      "set": "pit",
+      "prompt": "Is at least one successful system read required to validate installation?",
+      "answerType": "single",
+      "options": ["Yes", "No", "Vendor-defined", "Not specified"],
+      "required": false
+    },
+    {
+      "questionId": "E17",
+      "set": "pit",
+      "prompt": "If installation is correct but communication fails due to system/material constraints, how is responsibility assigned?",
+      "answerType": "single",
+      "options": ["Contractor", "Vendor", "Utility", "Case-by-case", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "E18",
+      "set": "pit",
+      "prompt": "Should unresolved non-installation-related exceptions prevent route closure?",
+      "answerType": "single",
+      "options": ["No", "Only if install error", "Yes", "Not defined"],
+      "required": false
+    },
+
+    {
+      "questionId": "I1",
+      "set": "inside_set",
+      "prompt": "Does this project include indoor water meter installations?",
+      "answerType": "single",
+      "options": ["Yes — majority of meters", "Yes — limited subset", "No", "Not sure"],
+      "required": false
+    },
+    {
+      "questionId": "I2",
+      "set": "inside_set",
+      "prompt": "Approximately what percentage of total meters are indoor installations?",
+      "answerType": "single",
+      "options": ["<10%", "10–25%", "25–50%", ">50%", "Unknown"],
+      "required": false
+    },
+    {
+      "questionId": "I3",
+      "set": "inside_set",
+      "prompt": "What types of properties contain indoor meters? (Multi-select)",
+      "answerType": "multi",
+      "options": [
+        "Single-family residential",
+        "Multi-family residential",
+        "Commercial",
+        "Mixed-use",
+        "Institutional (schools, hospitals, etc.)",
+        "All / predominantly indoor system"
+      ],
+      "required": false
+    },
+    {
+      "questionId": "I4",
+      "set": "inside_set",
+      "prompt": "Who is responsible for customer outreach and appointment scheduling for indoor meter installations?",
+      "answerType": "single",
+      "options": ["Utility-led (contractor supports)", "Contractor-led (utility supports)", "Shared responsibility", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "I4a",
+      "set": "inside_set",
+      "prompt": "What outreach sequence is required before an account is classified as no-response / escalated?",
+      "answerType": "single",
+      "options": ["Utility letter + 1–2 contractor contacts", "Utility letter + 3–4 contractor contacts (recommended)", "Utility letter + 5+ contractor contacts", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "I4b",
+      "set": "inside_set",
+      "prompt": "After how many unsuccessful attempts should the contractor stop attempting and escalate the account?",
+      "answerType": "single",
+      "options": ["After a defined number of attempts", "After a defined time window (e.g., 30–60 days)", "Utility discretion", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "I4c",
+      "set": "inside_set",
+      "prompt": "Once escalated to UIR, what actions may the utility use to secure access? (Multi-select)",
+      "answerType": "multi",
+      "options": [
+        "Utility-led outreach / official notice process",
+        "Schedule appointment through utility channel",
+        "Service shutoff / service hold procedures (where allowed)",
+        "Fees/charges for non-compliance (where allowed)",
+        "Case-by-case",
+        "Not defined"
+      ],
+      "required": false
+    },
+    {
+      "questionId": "I5",
+      "set": "inside_set",
+      "prompt": "What appointment window structure will be used?",
+      "answerType": "single",
+      "options": ["2-hour windows", "4-hour windows (recommended)", "All-day windows", "Other / not defined"],
+      "required": false
+    },
+    {
+      "questionId": "I6",
+      "set": "inside_set",
+      "prompt": "Will contractor-provided call center and dispatch capability be required for indoor scheduling?",
+      "answerType": "single",
+      "options": ["Yes", "No", "Shared with utility", "Not sure / not defined"],
+      "required": false
+    },
+    {
+      "questionId": "I7",
+      "set": "inside_set",
+      "prompt": "How should missed appointments be handled and compensated?",
+      "answerType": "single",
+      "options": ["Included in unit price (contractor absorbs)", "Separate line item fee after defined threshold", "Returned to utility after first miss", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "I8",
+      "set": "inside_set",
+      "prompt": "Which notification channels are authorized for indoor access scheduling? (Multi-select)",
+      "answerType": "multi",
+      "options": [
+        "Utility letterhead letter (recommended)",
+        "Contractor postcard(s)",
+        "Phone calls",
+        "Text messages",
+        "Email",
+        "Door hanger (higher cost)",
+        "In-person door knock (higher cost)",
+        "Not defined"
+      ],
+      "required": false
+    },
+    {
+      "questionId": "I8a",
+      "set": "inside_set",
+      "prompt": "For mailed notifications, where should notices be sent?",
+      "answerType": "single",
+      "options": ["Service address only", "Billing/mailing address only", "Both service + billing/mailing (recommended)", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "I8b",
+      "set": "inside_set",
+      "prompt": "Can the utility identify accounts where mailed outreach is unlikely to reach the occupant and in-person contact is required?",
+      "answerType": "single",
+      "options": ["Yes (flagged list available)", "Somewhat", "No", "Not sure"],
+      "required": false
+    },
+    {
+      "questionId": "I9",
+      "set": "inside_set",
+      "prompt": "How many contact attempts should be made before classifying an account as no-response?",
+      "answerType": "single",
+      "options": ["1–2", "3–4", "5+", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "I10",
+      "set": "inside_set",
+      "prompt": "When should a location be classified as no-response or customer unavailable?",
+      "answerType": "single",
+      "options": ["After defined number of attempts", "After a defined time period", "At utility discretion", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "I11",
+      "set": "inside_set",
+      "prompt": "Which dispositions should count toward route completion for indoor work? (Multi-select)",
+      "answerType": "multi",
+      "options": [
+        "Completed install",
+        "Customer refusal documented",
+        "No-response documented",
+        "Vacant/unoccupied documented",
+        "Safety/access constraint documented",
+        "Utility Intervention Required (UIR) created",
+        "Return to Utility (RTU) created"
+      ],
+      "required": false
+    },
+    {
+      "questionId": "I12",
+      "set": "inside_set",
+      "prompt": "If remaining open locations are no-response, refusal, or UIR-dependent, may the contractor advance to new routes?",
+      "answerType": "single",
+      "options": ["Yes (recommended)", "No", "Subject to approval", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "I13",
+      "set": "inside_set",
+      "prompt": "How should customer refusals be handled?",
+      "answerType": "single",
+      "options": ["Logged and returned to utility", "Escalated through utility outreach", "Considered complete for contractor scope", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "I14",
+      "set": "inside_set",
+      "prompt": "How should responsibility be assigned for leaks or damage associated with indoor installations?",
+      "answerType": "single",
+      "options": [
+        "Contractor responsible for installation workmanship (recommended baseline)",
+        "Utility responsible for pre-existing plumbing failures",
+        "Shared / case-by-case with defined criteria",
+        "Not defined"
+      ],
+      "required": false
     },
     {
       "questionId": "I14a",
       "set": "inside_set",
-      "prompt": "TEST: Lead service line present?",
+      "prompt": "Are lead or lead-adjacent service lines expected?",
       "answerType": "single",
       "options": ["Yes", "No", "Unknown"],
-      "required": true
+      "required": false
+    },
+    {
+      "questionId": "I15",
+      "set": "inside_set",
+      "prompt": "What is the expected primary method for shutting off water during indoor meter replacement?",
+      "answerType": "single",
+      "options": ["Interior shutoff valve only", "Curb stop (B-Box) only", "Interior valve preferred; curb stop as backup (recommended)", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "I16",
+      "set": "inside_set",
+      "prompt": "What is the general condition of interior shutoff valves?",
+      "answerType": "single",
+      "options": ["Generally reliable", "Mixed condition", "Frequently inoperable", "Unknown"],
+      "required": false
+    },
+    {
+      "questionId": "I16a",
+      "set": "inside_set",
+      "prompt": "What types of interior shutoff valves are typically present? (Multi-select)",
+      "answerType": "multi",
+      "options": ["Ball valves", "Gate valves", "Globe valves", "Mixed / varies", "Unknown"],
+      "required": false
+    },
+    {
+      "questionId": "I16b",
+      "set": "inside_set",
+      "prompt": "If an interior shutoff valve is non-functional, is replacement authorized?",
+      "answerType": "single",
+      "options": ["Yes — included in installation scope", "Yes — under contingency allowance", "No — utility responsibility", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "I17a",
+      "set": "inside_set",
+      "prompt": "Does the utility maintain asset-level data identifying curb stop locations?",
+      "answerType": "single",
+      "options": ["Yes — accurate and current", "Partial / limited accuracy", "No", "Not sure"],
+      "required": false
+    },
+    {
+      "questionId": "I17b",
+      "set": "inside_set",
+      "prompt": "What is the general accessibility condition of curb stops?",
+      "answerType": "single",
+      "options": ["Generally accessible", "Mixed condition", "Frequently buried / obstructed", "Unknown"],
+      "required": false
+    },
+    {
+      "questionId": "I18",
+      "set": "inside_set",
+      "prompt": "Is the installation contractor authorized to access and operate curb stops?",
+      "answerType": "single",
+      "options": ["Yes", "Yes — with limitations", "No — utility staff only", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "I18a",
+      "set": "inside_set",
+      "prompt": "If utility-performed, what is the expected response time?",
+      "answerType": "single",
+      "options": ["Same-day", "Next-day", "Scheduled", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "I18b",
+      "set": "inside_set",
+      "prompt": "How should contractor curb stop access be treated commercially?",
+      "answerType": "single",
+      "options": ["Included in unit price", "Separate contingency line item (recommended)", "Time & materials", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "I20",
+      "set": "inside_set",
+      "prompt": "If valve replacement is authorized, are there utility standards?",
+      "answerType": "single",
+      "options": ["Specific valve/model required", "General specifications provided", "Contractor standard acceptable", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "I21",
+      "set": "inside_set",
+      "prompt": "Are freeze kits or alternative isolation methods permitted?",
+      "answerType": "single",
+      "options": ["Yes", "No", "Only with utility approval", "Not applicable", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "I24",
+      "set": "inside_set",
+      "prompt": "If a leak occurs during or immediately after installation, what is the expected response?",
+      "answerType": "single",
+      "options": ["Contractor mitigates", "Utility dispatches emergency crew", "Shared response", "Not defined"],
+      "required": false
+    },
+    {
+      "questionId": "I25",
+      "set": "inside_set",
+      "prompt": "What verification is required before restoring service? (Multi-select)",
+      "answerType": "multi",
+      "options": ["Visual leak check", "Pressure stabilization", "Customer confirmation", "Documentation/photo", "Not defined"],
+      "required": false
     }
   ]
 }
