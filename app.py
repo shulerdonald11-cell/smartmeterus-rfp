@@ -165,7 +165,23 @@ else:
                 st.rerun()
         else:
             st.success("✅ Scope questions complete.")
-            st.json(st.session_state.flow_session)
+
+    # Simple, non-technical completion view
+    tokens_count = len(st.session_state.flow_session.get("tokens", []))
+    escalations_count = len(st.session_state.flow_session.get("escalations", []))
+    st.write(f"**Tokens captured:** {tokens_count}")
+    st.write(f"**Escalations flagged:** {escalations_count}")
+
+    with st.expander("Review captured answers"):
+        st.json(st.session_state.flow_session.get("answers", {}))
+
+    # Optional: Download the session JSON for internal use (not shown by default)
+    st.download_button(
+        "⬇️ Download session JSON (internal)",
+        data=json.dumps(st.session_state.flow_session, indent=2),
+        file_name="scope_session_output.json",
+        mime="application/json"
+    )
 
     # ---------------------------
     # Chat initialization (helper-only when guided_mode is ON)
@@ -240,3 +256,4 @@ Use real-world U.S. water utility RFP language and structure.
 
 st.markdown("---")
 st.caption("AMI Validate Solutions • Professional RFP + Optional Field Validation Services")
+
