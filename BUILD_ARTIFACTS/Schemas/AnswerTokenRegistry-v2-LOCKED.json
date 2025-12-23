@@ -1,0 +1,14 @@
+{
+  "byQuestionId": {
+    "P01": [
+      { "token": "PIT_PROJECT_START_YES", "whenAnswerEquals": "Yes" },
+      { "token": "PIT_PROJECT_START_NO", "whenAnswerEquals": "No" },
+      { "token": "PIT_PROJECT_START_UNKNOWN", "whenAnswerEquals": "Unknown" }
+    ],
+    "I14a": [
+      { "token": "LEAD_SERVICE_LINE_PRESENT", "whenAnswerEquals": "Yes" },
+      { "token": "LEAD_SERVICE_LINE_NOT_PRESENT", "whenAnswerEquals": "No" },
+      { "token": "LEAD_SERVICE_LINE_UNKNOWN", "whenAnswerEquals": "Unknown" }
+    ]
+  }
+}
