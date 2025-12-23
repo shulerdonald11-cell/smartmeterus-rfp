@@ -1,0 +1,20 @@
+{
+  "questions": [
+    {
+      "questionId": "P01",
+      "set": "pit",
+      "prompt": "TEST: PIT question placeholder (replace with your real P01 prompt later).",
+      "answerType": "single",
+      "options": ["Yes", "No", "Unknown"],
+      "required": true
+    },
+    {
+      "questionId": "I14a",
+      "set": "inside_set",
+      "prompt": "TEST: Lead service line present?",
+      "answerType": "single",
+      "options": ["Yes", "No", "Unknown"],
+      "required": true
+    }
+  ]
+}
