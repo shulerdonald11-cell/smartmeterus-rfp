@@ -1,261 +1,413 @@
-import streamlit as st
-from openai import OpenAI
-import os
-from dotenv import load_dotenv
-from fpdf import FPDF
-import base64
-import json
+"""
+flow_engine.py
+Deterministic scope flow engine for Water – PIT & Inside Set
 
-from flow_engine import FlowEngine
+AUTHORITATIVE INPUTS (JSON FILES):
+- QuestionsBundle-Water-PIT-Inside.json
+- AnswerTokenRegistry-v2-LOCKED.json
+- BranchEngineRules-v1-LOCKED.json (loaded, but MVP uses internal gating/suppression)
 
-load_dotenv()
+This module:
+- Does NOT call any LLM
+- Does NOT render UI
+- Does NOT generate PDFs
+- Controls question order, token emission, suppression, and basic risk/escalation hooks
 
-client = OpenAI(
-    api_key=os.getenv("GROK_API_KEY"),
-    base_url="https://api.x.ai/v1"
-)
-
-st.set_page_config(page_title="AMI Validate Solutions", page_icon="💧", layout="centered")
-
-# ---------------------------
-# Guided Scope Builder Engine
-# ---------------------------
-if "flow_engine" not in st.session_state:
-    # IMPORTANT: this path must exist inside your repo on Streamlit Cloud
-    # Make sure your JSON artifacts are committed under BUILD_ARTIFACTS/Schemas
-    st.session_state.flow_engine = FlowEngine(base_path="BUILD_ARTIFACTS/Schemas")
-
-if "flow_session" not in st.session_state:
-    st.session_state.flow_session = None
-
-# ---------------------------
-# Styling / Headers
-# ---------------------------
-st.markdown(
-    """
-<style>
-    .main {background-color: #f0f7fa;}
-    .header {font-size: 42px; color: #006699; text-align: center; padding: 20px;}
-    .subheader {font-size: 24px; color: #0088cc; text-align: center;}
-    .info-box {background-color: #e6f5ff; padding: 20px; border-radius: 10px; border-left: 6px solid #006699;}
-    .bullet {margin-left: 20px;}
-</style>
-""",
-    unsafe_allow_html=True
-)
-
-st.markdown("<div class='header'>💧 AMI Validate Solutions</div>", unsafe_allow_html=True)
-st.markdown("<div class='subheader'>Professional Water AMI RFP Generator</div>", unsafe_allow_html=True)
-st.markdown("**20+ Years of Utility Expertise • Free Customized RFP in Minutes**")
-
-guided_mode = st.toggle(
-    "🧭 Guided Scope Builder (Beta)",
-    value=True,
-    help="Uses a structured question flow instead of free-form chat."
-)
-
-if guided_mode and st.session_state.flow_session is None:
-    st.session_state.flow_session = st.session_state.flow_engine.start_session()
-
-# ---------------------------
-# Landing page gate
-# ---------------------------
-if "started" not in st.session_state:
-    st.session_state.started = False
-
-if not st.session_state.started:
-    st.markdown(
-        """
-    <div class='info-box'>
-    <h3>Welcome! Let's Build Your AMI RFP</h3>
-    <p>I'll guide you step-by-step to create a professional, bid-ready RFP tailored to your utility.</p>
-    <p><strong>Best Practice Tip:</strong> For the strongest project outcome, we recommend a pre-deployment field survey (even a small sample) to identify risks like buried pits, traffic hazards, or compatibility issues. This reduces change orders and failed installations by up to 50%. We offer paid validation services starting at $10k if you'd like expert help.</p>
-    </div>
-    """,
-        unsafe_allow_html=True
-    )
-
-    st.markdown("### To get the most accurate RFP, have this information ready:")
-    st.markdown(
-        """
-    <ul class='bullet'>
-    <li>Utility name and location</li>
-    <li>Number of meters and sizes (e.g., 2,000 × 5/8&quot;x3/4&quot;, 100 × 1&quot;)</li>
-    <li>Current reading system (manual, drive-by AMR, partial AMI?)</li>
-    <li>Project goals: Full AMI? Meter replacement only? Turnkey or install-only?</li>
-    <li>Preferred start date and bid due date</li>
-    <li>Expected deployment duration (e.g., 3–6 months)</li>
-    <li>Known site risks (buried pits, downtown traffic, flood-prone areas?)</li>
-    <li>Any large meters (&gt;2&quot;) or special requirements</li>
-    <li>Need for training, WOMS integration, or post-install support?</li>
-    </ul>
-    """,
-        unsafe_allow_html=True
-    )
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if st.button("📄 Download Questionnaire Template (PDF)", use_container_width=True):
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font("Arial", 'B', 16)
-            pdf.cell(0, 10, "AMI RFP Preparation Questionnaire", ln=True, align='C')
-            pdf.ln(10)
-            pdf.set_font("Arial", size=12)
-            questions = [
-                "1. Utility Name & Location:",
-                "2. Total Meters & Sizes:",
-                "3. Current Reading System:",
-                "4. Project Type (turnkey / install-only / product-only):",
-                "5. Desired Start Date & Bid Due Date:",
-                "6. Expected Deployment Duration:",
-                "7. Known Site Risks:",
-                "8. Need Field Survey? (Recommended)",
-                "9. Additional Notes:"
-            ]
-            for q in questions:
-                pdf.multi_cell(0, 10, q)
-                pdf.ln(5)
-
-            pdf_output = "AMI_RFP_Questionnaire.pdf"
-            pdf.output(pdf_output)
-            with open(pdf_output, "rb") as f:
-                b64 = base64.b64encode(f.read()).decode()
-                href = f'<a href="data:application/pdf;base64,{b64}" download="{pdf_output}">Click here if download doesn’t start</a>'
-                st.markdown(href, unsafe_allow_html=True)
-
-    with col2:
-        if st.button("🚀 Get Started – Begin Now", type="primary", use_container_width=True):
-            st.session_state.started = True
-            st.rerun()
-
-    st.markdown("---")
-    st.caption("Ready when you are. Click 'Get Started' to begin your custom RFP.")
-
-else:
-    st.markdown("### 💬 Chat with Your AMI Expert")
-    st.info("Chat stays available as a helper. Guided Mode controls question order.")
-
-    # ---------------------------
-    # Guided Scope Builder UI
-    # ---------------------------
-    if guided_mode and st.session_state.flow_session:
-        engine = st.session_state.flow_engine
-        session = st.session_state.flow_session
-        current_question = engine.get_current_question(session)
-
-        if current_question:
-            st.subheader("🧭 Guided Scope Questions")
-            st.markdown(current_question["prompt"])
-
-            answer = None
-            if current_question.get("answerType") == "single":
-                answer = st.radio(
-                    "Select one:",
-                    current_question.get("options", []),
-                    key=f"guided_{current_question['questionId']}"
-                )
-
-            if st.button("Next"):
-                st.session_state.flow_session = engine.submit_answer(
-                    session=session,
-                    answer_value=answer,
-                    value_type="single"
-                )
-                st.rerun()
-        else:
-            st.success("✅ Scope questions complete.")
-
-    # Simple, non-technical completion view
-    tokens_count = len(st.session_state.flow_session.get("tokens", []))
-    escalations_count = len(st.session_state.flow_session.get("escalations", []))
-    st.write(f"**Tokens captured:** {tokens_count}")
-    st.write(f"**Escalations flagged:** {escalations_count}")
-
-    with st.expander("Review captured answers"):
-        st.json(st.session_state.flow_session.get("answers", {}))
-
-    # Optional: Download the session JSON for internal use (not shown by default)
-    st.download_button(
-        "⬇️ Download session JSON (internal)",
-        data=json.dumps(st.session_state.flow_session, indent=2),
-        file_name="scope_session_output.json",
-        mime="application/json"
-    )
-
-    # ---------------------------
-    # Chat initialization (helper-only when guided_mode is ON)
-    # ---------------------------
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-
-        if guided_mode:
-            system_prompt = (
-                "You are a helper assistant. "
-                "You may explain questions or terminology, "
-                "but you may NOT choose questions or change their order."
-            )
-        else:
-            system_prompt = """
-You are an expert water AMI consultant with 20+ years experience helping small to mid-sized utilities create professional RFPs.
-
-Always guide step-by-step to flush out details:
-- Ask about meter types and AMI system (e.g., compatibility if they have meters, endpoint types).
-- Ask about WOMS (contractor provide their own or use existing? Integration needs?)
-- Ask about billing CIS update process and field data collection management for meter exchanges.
-- Probe for more details if prompt is basic.
-
-Only generate the full RFP when the user has provided sufficient detail or says "generate the RFP".
-
-Use real-world U.S. water utility RFP language and structure.
+Designed to be imported by Streamlit (app.py).
 """
 
-        st.session_state.messages.append({"role": "system", "content": system_prompt})
-
-    # Display chat history
-    for msg in st.session_state.messages[1:]:
-        with st.chat_message("user" if msg["role"] == "user" else "assistant"):
-            st.markdown(msg["content"])
-
-    # User input
-    if prompt := st.chat_input("Ask for clarification, or describe your project..."):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
-
-        with st.chat_message("assistant"):
-            response = ""
-            placeholder = st.empty()
-            stream = client.chat.completions.create(
-                model="grok-4-latest",
-                messages=st.session_state.messages,
-                stream=True
-            )
-            for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
-                    response += chunk.choices[0].delta.content
-                    placeholder.markdown(response + "▌")
-            placeholder.markdown(response)
-
-        st.session_state.messages.append({"role": "assistant", "content": response})
-        st.session_state.last_response = response
-
-    # PDF Download (kept as-is)
-    if "last_response" in st.session_state and "Request for Proposals" in st.session_state.last_response:
-        if st.button("📄 Download RFP as PDF"):
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font("Arial", size=12)
-            pdf.multi_cell(0, 10, st.session_state.last_response)
-            pdf_output = "Custom_AMI_RFP.pdf"
-            pdf.output(pdf_output)
-            with open(pdf_output, "rb") as f:
-                b64 = base64.b64encode(f.read()).decode()
-                href = f'<a href="data:application/pdf;base64,{b64}" download="{pdf_output}">Click to download your RFP</a>'
-                st.markdown(href, unsafe_allow_html=True)
-
-st.markdown("---")
-st.caption("AMI Validate Solutions • Professional RFP + Optional Field Validation Services")
+import json
+from pathlib import Path
+from datetime import datetime
+from typing import Dict, List, Any, Optional, Tuple
 
 
+# -----------------------------
+# Utilities
+# -----------------------------
+
+def _now() -> str:
+    return datetime.utcnow().isoformat()
+
+
+def _load_json(path: Path) -> dict:
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _as_int(val: Any, default: int = 10_000_000) -> int:
+    try:
+        return int(val)
+    except Exception:
+        return default
+
+
+# -----------------------------
+# Flow Engine
+# -----------------------------
+
+class FlowEngine:
+    """
+    MVP behavior:
+    - Uses question.order (100, 110, 120...) for deterministic sequencing (insert-friendly)
+    - Uses a scope selector question (questionId = 'SCOPE01') if present:
+        answers: 'pit' | 'inside_set' | 'both'
+      If absent, defaults to 'both'
+    - Uses Inside gating question (questionId = 'I1') if present:
+        If I1 answer is exactly "No" (case-insensitive match), suppress I2+ inside_set questions
+    - Supports Back via history stack
+    - Exposes progress (active list index / total)
+    """
+
+    def __init__(self, base_path: Optional[str] = None):
+        base = Path(base_path) if base_path else Path(__file__).parent
+
+        self.questions_bundle = _load_json(base / "QuestionsBundle-Water-PIT-Inside.json")
+        self.token_registry = _load_json(base / "AnswerTokenRegistry-v2-LOCKED.json")
+        self.branch_rules = _load_json(base / "BranchEngineRules-v1-LOCKED.json")
+
+        questions = self.questions_bundle.get("questions", [])
+        self.questions_index: Dict[str, Dict[str, Any]] = {q["questionId"]: q for q in questions}
+
+        # Precompute an "all questions in order" list (independent of scope suppression)
+        self.all_ordered_question_ids: List[str] = self._compute_ordered_ids(questions)
+
+    # -------------------------
+    # Ordering
+    # -------------------------
+
+    def _compute_ordered_ids(self, questions: List[Dict[str, Any]]) -> List[str]:
+        """
+        Primary: order field (int)
+        Secondary: set grouping (stable)
+        Tertiary: questionId (stable)
+        """
+        sortable: List[Tuple[int, str, str]] = []
+        for q in questions:
+            qid = q.get("questionId")
+            order = _as_int(q.get("order"), default=10_000_000)
+            qset = str(q.get("set", ""))
+            sortable.append((order, qset, qid))
+        sortable.sort(key=lambda t: (t[0], t[1], t[2]))
+        return [qid for (_, _, qid) in sortable]
+
+    # -------------------------
+    # Session Lifecycle
+    # -------------------------
+
+    def start_session(self) -> Dict[str, Any]:
+        """
+        Initializes a session and sets the first current question
+        from the active question list.
+        """
+        session = {
+            "startedAt": _now(),
+            "currentQuestionId": None,
+            "answers": {},             # qid -> {value, valueType, answeredAt, answerType?}
+            "tokens": [],              # emitted token events
+            "riskFlags": [],
+            "escalations": [],
+            "completed": False,
+
+            # NEW:
+            "history": [],             # stack of visited qids (for Back)
+            "activeQuestionIds": [],   # derived list based on scope & suppression
+            "notes": {}                # optional per-question notes (qid -> str)
+        }
+
+        self._refresh_active_questions(session)
+        first_qid = session["activeQuestionIds"][0] if session["activeQuestionIds"] else None
+        session["currentQuestionId"] = first_qid
+        return session
+
+    # -------------------------
+    # Public API
+    # -------------------------
+
+    def get_current_question(self, session: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        qid = session.get("currentQuestionId")
+        if not qid:
+            return None
+        return self.questions_index.get(qid)
+
+    def get_progress(self, session: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Returns progress info based on active question list.
+        """
+        active = session.get("activeQuestionIds", [])
+        current = session.get("currentQuestionId")
+
+        total = len(active)
+        if total == 0:
+            return {"currentIndex": 0, "total": 0, "pct": 1.0}
+
+        try:
+            idx = active.index(current) + 1 if current else total
+        except ValueError:
+            idx = 0
+
+        pct = min(max(idx / total, 0.0), 1.0)
+        return {"currentIndex": idx, "total": total, "pct": pct}
+
+    def can_go_back(self, session: Dict[str, Any]) -> bool:
+        return len(session.get("history", [])) > 0
+
+    def go_back(self, session: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Moves to the previous question in history.
+        Does NOT delete answers by default.
+        """
+        if not self.can_go_back(session):
+            return session
+
+        prev_qid = session["history"].pop()
+        session["currentQuestionId"] = prev_qid
+        session["completed"] = False
+        return session
+
+    def set_note(self, session: Dict[str, Any], question_id: str, note: str) -> Dict[str, Any]:
+        """
+        Stores optional per-question note in session.
+        """
+        if "notes" not in session:
+            session["notes"] = {}
+        session["notes"][question_id] = note
+        return session
+
+    # -------------------------
+    # Core Step
+    # -------------------------
+
+    def submit_answer(
+        self,
+        session: Dict[str, Any],
+        answer_value: Any,
+        value_type: str = "single"
+    ) -> Dict[str, Any]:
+        """
+        Apply an answer, emit tokens, update risk, refresh suppression, and advance flow.
+        """
+
+        qid = session.get("currentQuestionId")
+        if not qid:
+            session["completed"] = True
+            return session
+
+        question = self.questions_index.get(qid, {})
+        answer_type = question.get("answerType")
+
+        # Record history for Back (only if not already last)
+        if session.get("history") is None:
+            session["history"] = []
+        if session["history"] and session["history"][-1] == qid:
+            # avoid duplicates
+            pass
+        else:
+            session["history"].append(qid)
+
+        # Record answer
+        session["answers"][qid] = {
+            "value": answer_value,
+            "valueType": value_type,
+            "answerType": answer_type,
+            "answeredAt": _now()
+        }
+
+        # Emit tokens (registry-driven)
+        emitted_tokens = self._emit_tokens(qid, answer_value)
+        session["tokens"].extend(emitted_tokens)
+
+        # Apply minimal risk rules (existing hooks)
+        self._apply_rules(session, qid, emitted_tokens, value_type)
+
+        # Recompute active questions because scope/suppression may have changed
+        self._refresh_active_questions(session)
+
+        # Advance to next unanswered in active list
+        next_qid = self._next_unanswered_after(session, qid)
+
+        if next_qid:
+            session["currentQuestionId"] = next_qid
+        else:
+            session["completed"] = True
+            session["currentQuestionId"] = None
+
+        return session
+
+    # -------------------------
+    # Token Logic
+    # -------------------------
+
+    def _emit_tokens(self, question_id: str, answer: Any) -> List[Dict[str, Any]]:
+        emitted: List[Dict[str, Any]] = []
+
+        rules = self.token_registry.get("byQuestionId", {}).get(question_id, [])
+
+        # Support list answers for multi-select by emitting per selected value if registry expects strings
+        if isinstance(answer, list):
+            answers = answer
+        else:
+            answers = [answer]
+
+        for rule in rules:
+            token = rule.get("token")
+            expected = rule.get("whenAnswerEquals")
+
+            for a in answers:
+                if expected is None:
+                    emitted.append({
+                        "token": token,
+                        "questionId": question_id,
+                        "emittedAt": _now(),
+                        "value": a
+                    })
+                else:
+                    if str(a).strip().lower() == str(expected).strip().lower():
+                        emitted.append({
+                            "token": token,
+                            "questionId": question_id,
+                            "emittedAt": _now(),
+                            "value": a
+                        })
+
+        return emitted
+
+    # -------------------------
+    # Minimal Risk / Escalation Hooks
+    # -------------------------
+
+    def _apply_rules(
+        self,
+        session: Dict[str, Any],
+        question_id: str,
+        tokens: List[Dict[str, Any]],
+        value_type: str
+    ):
+        token_names = {t["token"] for t in tokens}
+
+        # Unknown handling
+        if value_type == "unknown":
+            session["riskFlags"].append({
+                "code": "UNKNOWN_ANSWER",
+                "severity": "unknown",
+                "questionId": question_id
+            })
+            session["escalations"].append({
+                "type": "field_validation",
+                "severity": "unknown",
+                "reason": "Unknown answer requires verification"
+            })
+
+        # Lead service line escalation (example)
+        if question_id == "I14a" and (
+            "LEAD_SERVICE_LINE_PRESENT" in token_names
+            or "LEAD_SERVICE_LINE_SUSPECTED" in token_names
+        ):
+            session["riskFlags"].append({
+                "code": "LEAD_RISK",
+                "severity": "high",
+                "questionId": question_id
+            })
+            session["escalations"].append({
+                "type": "utility_review",
+                "severity": "high",
+                "reason": "Lead service line present or suspected"
+            })
+
+    # -------------------------
+    # Suppression / Active List
+    # -------------------------
+
+    def _refresh_active_questions(self, session: Dict[str, Any]) -> None:
+        """
+        Builds the active question list based on:
+        - scope selector (SCOPE01) if present
+        - inside gating (I1 == "No") suppresses remaining inside questions
+        """
+        active: List[str] = []
+
+        # Determine scope selection (default both)
+        scope = self._get_scope_selection(session)
+
+        # Determine inside inclusion gate based on I1 answer
+        inside_allowed = True
+        i1_ans = self._get_answer_value(session, "I1")
+        if i1_ans is not None and str(i1_ans).strip().lower() == "no":
+            inside_allowed = False
+
+        for qid in self.all_ordered_question_ids:
+            q = self.questions_index.get(qid, {})
+            qset = q.get("set")
+
+            # Scope filter
+            if scope == "pit" and qset == "inside_set":
+                continue
+            if scope == "inside_set" and qset == "pit":
+                continue
+
+            # Inside suppression after I1 == No:
+            # Keep I1 itself (so the user can flip it), suppress I2+.
+            if qset == "inside_set" and not inside_allowed and qid != "I1":
+                continue
+
+            active.append(qid)
+
+        session["activeQuestionIds"] = active
+
+        # If current question is no longer active, move to next active unanswered (or first active)
+        cur = session.get("currentQuestionId")
+        if cur and cur not in active:
+            session["currentQuestionId"] = self._first_unanswered(session) or (active[0] if active else None)
+
+    def _get_scope_selection(self, session: Dict[str, Any]) -> str:
+        """
+        Returns one of: 'pit', 'inside_set', 'both'
+        If SCOPE01 does not exist or unanswered, defaults to 'both'.
+        """
+        if "SCOPE01" not in self.questions_index:
+            return "both"
+
+        val = self._get_answer_value(session, "SCOPE01")
+        if val is None:
+            return "both"
+
+        s = str(val).strip().lower()
+        if "pit" in s and "both" not in s:
+            return "pit"
+        if "inside" in s and "both" not in s:
+            return "inside_set"
+        if "both" in s:
+            return "both"
+
+        # If user stores exact tokens like pit/inside_set/both:
+        if s in ("pit", "inside_set", "both"):
+            return s
+
+        return "both"
+
+    def _get_answer_value(self, session: Dict[str, Any], qid: str) -> Any:
+        ans = session.get("answers", {}).get(qid)
+        if not ans:
+            return None
+        return ans.get("value")
+
+    def _first_unanswered(self, session: Dict[str, Any]) -> Optional[str]:
+        for qid in session.get("activeQuestionIds", []):
+            if qid not in session.get("answers", {}):
+                return qid
+        return None
+
+    def _next_unanswered_after(self, session: Dict[str, Any], current_qid: str) -> Optional[str]:
+        active = session.get("activeQuestionIds", [])
+        answers = session.get("answers", {})
+
+        try:
+            idx = active.index(current_qid)
+        except ValueError:
+            return self._first_unanswered(session)
+
+        for next_qid in active[idx + 1:]:
+            if next_qid not in answers:
+                return next_qid
+
+        return None
